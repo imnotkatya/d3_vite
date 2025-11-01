@@ -1,0 +1,12 @@
+key,color,stroke_dash,y_modify,stroke,stroke-width,symbol
+vemu,green,0,0,black,1,
+followUp,blue,0,0,black,1,
+chemo,grey,5.5,-3,black,1,
+vemu_r,green,0,0,black,1,
+cube,red,0,0,black,0,🟥
+myeloid,yellow,0,8,black,1,🧀
+relapse,purple,0,2,black,1,♦️
+mds,pink,0,2,black,1,🌸
+circle,red,0,4,black,0,🔴
+cfdna,orange,0,-7,black,1,🔻
+arrow,darkgreen,0,0,black,1,➡️

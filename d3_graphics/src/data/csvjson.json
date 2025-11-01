@@ -1,0 +1,101 @@
+[
+  {
+    "key": "vemu",
+    "color": "green",
+    "stroke_dash": 0,
+    "y_modify": 0,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": ""
+  },
+  {
+    "key": "followUp",
+    "color": "blue",
+    "stroke_dash": 0,
+    "y_modify": 0,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": ""
+  },
+  {
+    "key": "chemo",
+    "color": "grey",
+    "stroke_dash": 5.5,
+    "y_modify": -3,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": ""
+  },
+  {
+    "key": "vemu_r",
+    "color": "green",
+    "stroke_dash": 0,
+    "y_modify": 0,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": ""
+  },
+  {
+    "key": "cube",
+    "color": "red",
+    "stroke_dash": 0,
+    "y_modify": 0,
+    "stroke": "black",
+    "stroke-width": 0,
+    "symbol": "🟥"
+  },
+  {
+    "key": "myeloid",
+    "color": "yellow",
+    "stroke_dash": 0,
+    "y_modify": 8,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": "🧀"
+  },
+  {
+    "key": "relapse",
+    "color": "purple",
+    "stroke_dash": 0,
+    "y_modify": 2,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": "♦️"
+  },
+  {
+    "key": "mds",
+    "color": "pink",
+    "stroke_dash": 0,
+    "y_modify": 2,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": "🌸"
+  },
+  {
+    "key": "circle",
+    "color": "red",
+    "stroke_dash": 0,
+    "y_modify": 4,
+    "stroke": "black",
+    "stroke-width": 0,
+    "symbol": "🔴"
+  },
+  {
+    "key": "cfdna",
+    "color": "orange",
+    "stroke_dash": 0,
+    "y_modify": -7,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": "🔻"
+  },
+  {
+    "key": "arrow",
+    "color": "darkgreen",
+    "stroke_dash": 0,
+    "y_modify": 0,
+    "stroke": "black",
+    "stroke-width": 1,
+    "symbol": "➡️"
+  }
+]
