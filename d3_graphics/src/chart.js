@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { convertWideToLong } from './convertWideToLong';
 import * as aq from 'arquero';
-
+import { Sort_Data } from './sort';
 export async function createChart(container) {
   const width = 600;
   const height = 800;
@@ -29,21 +29,7 @@ console.log(datasetData)
     }));
 
     const parsedDataset_long = convertWideToLong(datasetData);
-    
-    const datagrouped = d3.group(
-      [...parsedDataset_long.rectangles, ...parsedDataset_long.events], 
-      (d) => d.name
-    );
-    
-    const sortedData = Array.from(datagrouped)
-      .sort((a, b) => {
-        const aMaxEnd = d3.max(a[1].filter(d => d.end !== undefined).map(d => +d.end));
-        const bMaxEnd = d3.max(b[1].filter(d => d.end !== undefined).map(d => +d.end));
-        return (aMaxEnd || 0) - (bMaxEnd || 0);
-      })
-      .flatMap(([id, types]) => types);
-
-    console.log("sorted:", sortedData);
+   const sortedData=Sort_Data(parsedDataset_long);
 
   
     container.innerHTML = '';
