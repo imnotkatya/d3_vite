@@ -1,9 +1,6 @@
 import * as d3 from 'd3';
 import { convertWideToLong } from './convertWideToLong';
-
-
-import stylesData from '/src/data/csvjson.json';
-import datasetData from '/src/data/csvjson-2.json';
+import * as aq from 'arquero';
 
 export async function createChart(container) {
   const width = 600;
@@ -14,9 +11,11 @@ export async function createChart(container) {
   const marginLeft = 120; 
 
   try {
-   
-    console.log("Styles data:", stylesData);
-    console.log("Dataset data:", datasetData);
+const stylesTable = await aq.loadCSV('/src/data/styles.csv'); //RIGHT ROUTE!!!!
+const stylesData = stylesTable.objects();
+
+const datasetTable = await aq.loadCSV('/src/data/followUp_long_excel@2.csv'); //RIGHT ROUTE!!!!
+const datasetData = datasetTable.objects();
 
     const colors = stylesData.map(d => ({
       key: d.key,
