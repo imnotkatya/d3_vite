@@ -15,7 +15,5 @@ export function Sort_Data(data) {
     .orderby("max_end")
     .objects();
 
-  console.log("combined", combined);
-
   return combined;
 }

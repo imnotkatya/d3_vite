@@ -14,8 +14,6 @@ export async function createChart(container) {
     const stylesTable = await aq.loadCSV("/src/data/styles.csv"); //RIGHT ROUTE!!!!
     const stylesData = stylesTable.objects();
 
-    //const datasetTable = await aq.loadCSV('/src/data/zero_data.csv'); //RIGHT ROUTE!!!!
-
     const colors = stylesData.map((d) => ({
       key: d.key,
       color: d.color,
@@ -29,12 +27,8 @@ export async function createChart(container) {
 
     const dataset_Long_load = await aq.loadCSV("/src/data/zero_data.csv");
     const dataset_Long = dataset_Long_load.objects();
-
     const parsedDataset_long = convertWideToLong(dataset_Long);
-    console.log(parsedDataset_long);
     const sortedData = Sort_Data(parsedDataset_long);
-
-    console.log("sorted:", sortedData);
 
     container.innerHTML = "";
 
