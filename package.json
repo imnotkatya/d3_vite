@@ -9,6 +9,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "prettier": "3.6.2",
     "vite": "^7.1.7"
+  },
+  "dependencies": {
+    "arquero": "^8.0.3",
+    "d3": "^7.9.0"
   }
 }

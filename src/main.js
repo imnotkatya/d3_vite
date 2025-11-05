@@ -1,7 +1,7 @@
-import './style.css';
-import { createChart } from './chart.js';
+import "./style.css";
+import { createChart } from "./chart.js";
 
-document.querySelector('#app').innerHTML = `
+document.querySelector("#app").innerHTML = `
   <div>
     <div class="card">
       <div id="chart-container"></div>
@@ -9,6 +9,5 @@ document.querySelector('#app').innerHTML = `
   </div>
 `;
 
-
-const container = document.querySelector('#chart-container');
+const container = document.querySelector("#chart-container");
 createChart(container);
