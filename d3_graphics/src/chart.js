@@ -14,9 +14,8 @@ export async function createChart(container) {
 const stylesTable = await aq.loadCSV('/src/data/styles.csv'); //RIGHT ROUTE!!!!
 const stylesData = stylesTable.objects();
 
-const datasetTable = await aq.loadCSV('/src/data/zero_data.csv'); //RIGHT ROUTE!!!!
-const datasetData = datasetTable.objects();
-console.log(datasetData)
+//const datasetTable = await aq.loadCSV('/src/data/zero_data.csv'); //RIGHT ROUTE!!!!
+
     const colors = stylesData.map(d => ({
       key: d.key,
       color: d.color,
@@ -28,9 +27,14 @@ console.log(datasetData)
       strokeWidth: +d['stroke-width']
     }));
 
-    const parsedDataset_long = convertWideToLong(datasetData);
-   const sortedData=Sort_Data(parsedDataset_long);
-
+    const dataset_Long_load = await aq.loadCSV('/src/data/zero_data.csv');
+    const dataset_Long=dataset_Long_load.objects();
+   
+  const parsedDataset_long = convertWideToLong(dataset_Long);
+ console.log(parsedDataset_long)
+  const sortedData = Sort_Data(parsedDataset_long);
+   
+    console.log("sorted:", sortedData);
   
     container.innerHTML = '';
 
@@ -39,7 +43,7 @@ console.log(datasetData)
       .attr("width", width)
       .attr("height", height);
 
-    const uniqueNames = [...new Set(sortedData.map(d => d.name))];
+     const uniqueNames = [...new Set(sortedData.map(d => d.name))];
     const y = d3.scaleBand()
       .domain(uniqueNames) 
       .paddingInner(0.2)
