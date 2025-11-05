@@ -1,4 +1,3 @@
-import "./style.css";
 import { createChart } from "./chart.js";
 
 document.querySelector("#app").innerHTML = `
