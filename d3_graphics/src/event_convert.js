@@ -6,11 +6,7 @@ export function events_convert(dataset) {
      .filter(d => d.event )
     .derive({
       type: d => aq.op.replace(d.event_key, "___event", ""),
-     event: d => {
-           const eventDate = aq.op.parse_date(d.event);
-           const zeroDate = aq.op.parse_date(d.zero);
-           return (eventDate - zeroDate) / (1000 * 60 * 60 * 24);
-         }
+    event: d =>( aq.op.parse_date(d.event)-aq.op.parse_date(d.zero))/ (1000 * 60 * 60 * 24)
     })
   
     .objects();

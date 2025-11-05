@@ -15,16 +15,10 @@ export function  rectangles_convert(dataset)
   .rename({"start_key":"type","end_key":"type"})
   .filter(d => d.start )
    .derive({
-     start: d => {
-       const startDate = aq.op.parse_date(d.start);
-       const zeroDate = aq.op.parse_date(d.zero);
-       return (startDate - zeroDate) / (1000 * 60 * 60 * 24);
-     },
-     end: d => {
-       const endDate = aq.op.parse_date(d.end);
-       const zeroDate = aq.op.parse_date(d.zero);
-       return (endDate - zeroDate) / (1000 * 60 * 60 * 24);
-     }
+     start: d =>( aq.op.parse_date(d.start)-aq.op.parse_date(d.zero))/ (1000 * 60 * 60 * 24),
+      end: d =>( aq.op.parse_date(d.end)-aq.op.parse_date(d.zero))/ (1000 * 60 * 60 * 24)
+  
+    
    })
    .objects();
   ;
