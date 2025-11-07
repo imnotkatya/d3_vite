@@ -2,16 +2,30 @@ import * as d3 from "d3";
 import { convertWideToLong } from "./convertWideToLong";
 import * as aq from "arquero";
 import { Sort_Data } from "./sort";
+
 export async function createChart(container) {
-  const width = 600;
-  const height = 800;
-  const marginTop = 30;
-  const marginRight = 30;
-  const marginBottom = 30;
-  const marginLeft = 120;
+  const style = document.createElement("style");
+  style.textContent = `
+    @font-face {
+      font-family: 'SymbolsNerdFontMono-Regular';
+      src: 
+           url('/src/fonts/SymbolsNerdFontMono-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
+    }
+  `;
+  document.head.appendChild(style);
+
+  const width = 1200;
+  const height = 1000;
+  const marginTop = 230;
+  const marginRight = 250;
+  const marginBottom = 100;
+  const marginLeft = 300;
 
   try {
-    const stylesTable = await aq.loadCSV("/src/data/styles.csv"); //RIGHT ROUTE!!!!
+    const stylesTable = await aq.loadCSV("/src/data/style.csv");
     const stylesData = stylesTable.objects();
 
     const colors = stylesData.map((d) => ({
@@ -25,7 +39,7 @@ export async function createChart(container) {
       strokeWidth: +d["stroke-width"],
     }));
 
-    const dataset_Long_load = await aq.loadCSV("/src/data/zero_data.csv");
+    const dataset_Long_load = await aq.loadCSV("/src/data/nb_info.csv");
     const dataset_Long = dataset_Long_load.objects();
     const parsedDataset_long = convertWideToLong(dataset_Long);
     const sortedData = Sort_Data(parsedDataset_long);
@@ -42,7 +56,7 @@ export async function createChart(container) {
     const y = d3
       .scaleBand()
       .domain(uniqueNames)
-      .paddingInner(0.2)
+      .paddingInner(0.5)
       .range([height - marginBottom, marginTop]);
 
     svg
@@ -62,7 +76,7 @@ export async function createChart(container) {
 
     const x = d3
       .scaleLinear()
-      .domain([0, 50])
+      .domain([0, 2400])
       .range([marginLeft, width - marginRight]);
 
     const color = d3
@@ -103,7 +117,7 @@ export async function createChart(container) {
     svg
       .append("g")
       .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(x).tickValues([0, 6, 12, 18, 24, 30, 36, 42, 48]));
+      .call(d3.axisBottom(x));
 
     svg
       .append("g")
@@ -111,8 +125,67 @@ export async function createChart(container) {
       .call(d3.axisLeft(y));
 
     svg
+      .append("defs")
+      .selectAll("marker")
+      .data(["arrow"])
+      .enter()
+      .append("marker")
+      .attr("id", "arrowhead")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 8)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", "#000");
+
+    const lineRectangles = parsedDataset_long.rectangles.filter(
+      (d) => d.type === "line",
+    );
+    const arrowRectangles = parsedDataset_long.rectangles.filter(
+      (d) => d.type === "arrow",
+    );
+
+    svg
+      .selectAll(".line")
+      .data(lineRectangles)
+      .enter()
+      .append("line")
+      .attr("class", "line")
+      .attr("x1", (d) => x(d.start))
+      .attr("x2", (d) => x(d.end))
+      .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
+      .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
+      .attr("stroke", (d) => stroke_color(d.type))
+      .attr("stroke-width", (d) => stroke_width(d.type))
+      .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+      .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
+
+    svg
+      .selectAll(".arrow")
+      .data(arrowRectangles)
+      .enter()
+      .append("line")
+      .attr("class", "arrow")
+      .attr("x1", (d) => x(d.start))
+      .attr("x2", (d) => x(d.end) + 10)
+      .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
+      .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
+      .attr("stroke", (d) => stroke_color(d.type))
+      .attr("stroke-width", (d) => stroke_width(d.type))
+      .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+      .attr("marker-end", "url(#arrowhead)")
+      .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
+
+    const otherRectangles = parsedDataset_long.rectangles.filter(
+      (d) => d.type !== "line" && d.type !== "arrow",
+    );
+
+    svg
       .selectAll(".rects")
-      .data(parsedDataset_long.rectangles)
+      .data(otherRectangles)
       .enter()
       .append("rect")
       .attr("stroke-dasharray", (d) => stroke_dash(d.type))
@@ -134,45 +207,84 @@ export async function createChart(container) {
       .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
       .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
       .style("font-size", (d) => symbol_size(d.type))
+      .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
       .style("text-anchor", "middle")
       .text((d) => symbols(d.type));
+
+    const legendStartY = marginTop + 50;
+    const legendItemHeight = 25;
+
+    const legendGroup = svg
+      .append("g")
+      .attr("class", "legend")
+      .attr(
+        "transform",
+        `translate(${width - marginRight + 50}, ${legendStartY})`,
+      );
 
     colors.forEach((colorObj, i) => {
       const key = colorObj.key;
       const symbol = symbols(key);
+
       if (symbol) {
-        svg
+        legendGroup
           .append("text")
-          .attr("x", width - 90)
-          .attr("y", height / 2 + 105 + i * 25)
-          .attr("text-anchor", "middle")
+          .attr("x", 0)
+          .attr("y", i * legendItemHeight)
+          .attr("text-anchor", "start")
           .attr("dy", "0.35em")
-          .style("font-size", "16px")
+          .style("font-size", symbol_size(key))
           .text(symbol)
           .style("fill", color(key))
-          .attr("stroke", "black")
+          .attr("stroke", stroke_color(key))
+          .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
           .attr("stroke-width", 0.5);
       } else {
-        svg
-          .append("rect")
-          .attr("x", width - 100)
-          .attr("y", height / 2 + 90 + i * 25)
-          .attr("width", 20)
-          .attr("height", 20)
-          .attr("stroke", "black")
-          .style("fill", color(key));
+        if (key === "line") {
+          legendGroup
+            .append("line")
+            .attr("x1", 0)
+            .attr("x2", 20)
+            .attr("y1", i * legendItemHeight)
+            .attr("y2", i * legendItemHeight)
+            .attr("stroke", stroke_color(key))
+            .attr("stroke-width", stroke_width(key))
+            .attr("stroke-dasharray", stroke_dash(key));
+        } else if (key === "arrow") {
+          legendGroup
+            .append("line")
+            .attr("x1", 0)
+            .attr("x2", 25)
+            .attr("y1", i * legendItemHeight)
+            .attr("y2", i * legendItemHeight)
+            .attr("stroke", stroke_color(key))
+            .attr("stroke-width", stroke_width(key))
+            .attr("stroke-dasharray", stroke_dash(key))
+            .attr("marker-end", "url(#arrowhead)");
+        } else {
+          legendGroup
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", i * legendItemHeight - 10)
+            .attr("width", 20)
+            .attr("height", 15)
+            .attr("stroke", stroke_color(key))
+            .attr("stroke-dasharray", stroke_dash(key))
+            .attr("stroke-width", stroke_width(key))
+            .style("fill", color(key));
+        }
       }
     });
 
-    svg
+    legendGroup
       .selectAll(".legend-label")
       .data(colors.map((c) => c.key))
       .enter()
       .append("text")
-      .attr("x", width - 170)
-      .attr("y", (d, i) => height - 295 + i * 25)
-      .style("fill", "black")
-      .style("text-anchor", "end")
+      .attr("x", 30)
+      .attr("y", (d, i) => i * legendItemHeight)
+      .attr("dy", "0.35em")
+      .style("font-size", "12px")
       .text((d) => d);
   } catch (error) {
     console.error("Error creating chart:", error);
