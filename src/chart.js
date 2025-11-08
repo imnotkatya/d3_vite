@@ -25,7 +25,7 @@ export async function createChart(container) {
   const marginLeft = 300;
 
   try {
-    const stylesTable = await aq.loadCSV("/src/data/style.csv");
+    const stylesTable = await aq.loadCSV("/src/data/style_nb_death.csv");
     const stylesData = stylesTable.objects();
 
     const colors = stylesData.map((d) => ({
@@ -33,13 +33,14 @@ export async function createChart(container) {
       color: d.color,
       stroke_dash: +d.stroke_dash,
       y_modify: +d.y_modify,
+      x_modify: +d.x_modify,
       stroke: d.stroke,
       symbol: d.symbol,
       symbol_size: +d.symbol_size,
       strokeWidth: +d["stroke-width"],
     }));
 
-    const dataset_Long_load = await aq.loadCSV("/src/data/nb_info.csv");
+    const dataset_Long_load = await aq.loadCSV("/src/data/death.csv");
     const dataset_Long = dataset_Long_load.objects();
     const parsedDataset_long = convertWideToLong(dataset_Long);
     const sortedData = Sort_Data(parsedDataset_long);
@@ -104,6 +105,11 @@ export async function createChart(container) {
       .domain(colors.map((c) => c.key))
       .range(colors.map((c) => c.y_modify));
 
+    const x_modified = d3
+      .scaleOrdinal()
+      .domain(colors.map((c) => c.key))
+      .range(colors.map((c) => c.x_modify));
+
     const symbols = d3
       .scaleOrdinal()
       .domain(colors.map((c) => c.key))
@@ -124,28 +130,8 @@ export async function createChart(container) {
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y));
 
-    svg
-      .append("defs")
-      .selectAll("marker")
-      .data(["arrow"])
-      .enter()
-      .append("marker")
-      .attr("id", "arrowhead")
-      .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 8)
-      .attr("refY", 0)
-      .attr("markerWidth", 6)
-      .attr("markerHeight", 6)
-      .attr("orient", "auto")
-      .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "#000");
-
     const lineRectangles = parsedDataset_long.rectangles.filter(
       (d) => d.type === "line",
-    );
-    const arrowRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type === "arrow",
     );
 
     svg
@@ -163,24 +149,8 @@ export async function createChart(container) {
       .attr("stroke-dasharray", (d) => stroke_dash(d.type))
       .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
 
-    svg
-      .selectAll(".arrow")
-      .data(arrowRectangles)
-      .enter()
-      .append("line")
-      .attr("class", "arrow")
-      .attr("x1", (d) => x(d.start))
-      .attr("x2", (d) => x(d.end) + 10)
-      .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
-      .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
-      .attr("stroke", (d) => stroke_color(d.type))
-      .attr("stroke-width", (d) => stroke_width(d.type))
-      .attr("stroke-dasharray", (d) => stroke_dash(d.type))
-      .attr("marker-end", "url(#arrowhead)")
-      .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
-
     const otherRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type !== "line" && d.type !== "arrow",
+      (d) => d.type !== "line",
     );
 
     svg
@@ -197,13 +167,13 @@ export async function createChart(container) {
       .attr("x", (d) => x(d.start))
       .attr("height", y.bandwidth())
       .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
-
+    console.log(parsedDataset_long.events);
     svg
       .selectAll(".event")
       .data(parsedDataset_long.events)
       .enter()
       .append("text")
-      .attr("x", (d) => x(d.event))
+      .attr("x", (d) => x(d.event) + x_modified(d.type))
       .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
       .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
       .style("font-size", (d) => symbol_size(d.type))
@@ -250,17 +220,6 @@ export async function createChart(container) {
             .attr("stroke", stroke_color(key))
             .attr("stroke-width", stroke_width(key))
             .attr("stroke-dasharray", stroke_dash(key));
-        } else if (key === "arrow") {
-          legendGroup
-            .append("line")
-            .attr("x1", 0)
-            .attr("x2", 25)
-            .attr("y1", i * legendItemHeight)
-            .attr("y2", i * legendItemHeight)
-            .attr("stroke", stroke_color(key))
-            .attr("stroke-width", stroke_width(key))
-            .attr("stroke-dasharray", stroke_dash(key))
-            .attr("marker-end", "url(#arrowhead)");
         } else {
           legendGroup
             .append("rect")
