@@ -1,5 +1,5 @@
 import * as aq from "arquero";
-export function Sort_Data(data) {
+export default function (data) {
   const rects = aq.from(data.rectangles).select("name", "start", "end", "type");
   const events = aq
     .from(data.events)

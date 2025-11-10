@@ -1,5 +1,5 @@
 import * as aq from "arquero";
-export function events_convert(dataset) {
+export default function (dataset) {
   const events = aq
     .from(dataset)
     .select("name", aq.endswith("___event"), "zero")

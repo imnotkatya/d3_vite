@@ -1,7 +1,7 @@
 import * as d3 from "d3";
-import { convertWideToLong } from "./convertWideToLong";
+import convertWideToLong from "./convertWideToLong";
+import sort from "./sort";
 import * as aq from "arquero";
-import { Sort_Data } from "./sort";
 
 export async function createChart(container) {
   const style = document.createElement("style");
@@ -43,7 +43,7 @@ export async function createChart(container) {
     const dataset_Long_load = await aq.loadCSV("/src/data/death.csv");
     const dataset_Long = dataset_Long_load.objects();
     const parsedDataset_long = convertWideToLong(dataset_Long);
-    const sortedData = Sort_Data(parsedDataset_long);
+    const sortedData = sort(parsedDataset_long);
 
     container.innerHTML = "";
 

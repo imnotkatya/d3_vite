@@ -1,6 +1,6 @@
 import * as aq from "arquero";
 
-export function rectangles_convert(dataset) {
+export default function (dataset) {
   const rectangles = aq
     .from(dataset)
     .select("name", aq.endswith("___start"), aq.endswith("___end"), "zero")

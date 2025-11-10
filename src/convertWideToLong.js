@@ -1,12 +1,12 @@
-import { rectangles_convert } from "./rectangles_convert.js";
-import { events_convert } from "./event_convert.js";
-export function convertWideToLong(dataset) {
+import rectanglesConvert from "./rectanglesConvert";
+import eventConvert from "./eventConvert";
+export default function (dataset) {
   const result = {
     events: [],
     rectangles: [],
   };
 
-  result.rectangles = rectangles_convert(dataset);
-  result.events = events_convert(dataset);
+  result.rectangles = rectanglesConvert(dataset);
+  result.events = eventConvert(dataset);
   return result;
 }
