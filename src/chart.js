@@ -41,6 +41,9 @@ export async function createChart(container) {
     }));
 
     const dataset_Long_load = await aq.loadCSV("/src/data/death.csv");
+    // FIXME: ты конвертируешь в объекты, а потом снова делаешь arquero таблицу.
+    // Просто передавай таблицу в функции и
+    // возвращай тоже arquero таблицу.
     const dataset_Long = dataset_Long_load.objects();
     const parsedDataset_long = convertWideToLong(dataset_Long);
     const sortedData = sort(parsedDataset_long);
@@ -53,6 +56,7 @@ export async function createChart(container) {
       .attr("width", width)
       .attr("height", height);
 
+    // FIXME: use `distinct` and `array` methods
     const uniqueNames = [...new Set(sortedData.map((d) => d.name))];
     const y = d3
       .scaleBand()
@@ -85,6 +89,8 @@ export async function createChart(container) {
       .domain([0, 10])
       .range([marginLeft, width - marginRight]);
 
+    // FIXME: Сделай хелпер для создания ординальной шкалы.
+    // Вся разница в следующих 8 блоках кода — это функция передающаяся в range.
     const color = d3
       .scaleOrdinal()
       .domain(colors.map((c) => c.key))
@@ -135,8 +141,12 @@ export async function createChart(container) {
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y));
 
+    // FIXME: отрисовку линий, прямоугольников и легенды тоже лучше поместить в отдельные функции
+    // так легче читать код
+    // только по разным файлам их не раскидывай, оставь в этом.
+
     const lineRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type === "line",
+      (d) => d.type === "line"
     );
 
     svg
@@ -155,7 +165,7 @@ export async function createChart(container) {
       .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
 
     const otherRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type !== "line",
+      (d) => d.type !== "line"
     );
 
     svg
@@ -195,7 +205,7 @@ export async function createChart(container) {
       .attr("class", "legend")
       .attr(
         "transform",
-        `translate(${width - marginRight + 50}, ${legendStartY})`,
+        `translate(${width - marginRight + 50}, ${legendStartY})`
       );
 
     colors.forEach((colorObj, i) => {
