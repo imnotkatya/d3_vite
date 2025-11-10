@@ -25,7 +25,7 @@ export async function createChart(container) {
   const marginLeft = 300;
 
   try {
-    const stylesTable = await aq.loadCSV("/src/data/style_nb_death.csv");
+    const stylesTable = await aq.loadCSV("/src/data/styles_c.csv");
     const stylesData = stylesTable.objects();
 
     const colors = stylesData.map((d) => ({
@@ -176,6 +176,7 @@ export async function createChart(container) {
       .attr("x", (d) => x(d.event) + x_modified(d.type))
       .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
       .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
+      .attr("fill", (d) => color(d.type))
       .style("font-size", (d) => symbol_size(d.type))
       .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
       .style("text-anchor", "middle")
