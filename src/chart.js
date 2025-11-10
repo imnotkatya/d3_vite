@@ -80,6 +80,11 @@ export async function createChart(container) {
       .domain([0, 2400])
       .range([marginLeft, width - marginRight]);
 
+    const xAxis = d3
+      .scaleLinear()
+      .domain([0, 10])
+      .range([marginLeft, width - marginRight]);
+
     const color = d3
       .scaleOrdinal()
       .domain(colors.map((c) => c.key))
@@ -123,7 +128,7 @@ export async function createChart(container) {
     svg
       .append("g")
       .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(xAxis));
 
     svg
       .append("g")
