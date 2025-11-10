@@ -25,12 +25,13 @@ export async function createChart(container) {
   const marginLeft = 300;
 
   try {
-    const stylesTable = await aq.loadCSV("/src/data/styles_c.csv");
+    const stylesTable = await aq.loadCSV("/src/data/styles_labels.csv");
     const stylesData = stylesTable.objects();
 
     const colors = stylesData.map((d) => ({
       key: d.key,
       color: d.color,
+      label: d.label,
       stroke_dash: +d.stroke_dash,
       y_modify: +d.y_modify,
       x_modify: +d.x_modify,
@@ -172,7 +173,7 @@ export async function createChart(container) {
       .attr("x", (d) => x(d.start))
       .attr("height", y.bandwidth())
       .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
-    console.log(parsedDataset_long.events);
+
     svg
       .selectAll(".event")
       .data(parsedDataset_long.events)
@@ -198,7 +199,9 @@ export async function createChart(container) {
         `translate(${width - marginRight + 50}, ${legendStartY})`,
       );
 
-    colors.forEach((colorObj, i) => {
+    const uniqueLabels = [...new Map(colors.map((d) => [d.label, d])).values()];
+
+    uniqueLabels.forEach((colorObj, i) => {
       const key = colorObj.key;
       const symbol = symbols(key);
 
@@ -243,7 +246,7 @@ export async function createChart(container) {
 
     legendGroup
       .selectAll(".legend-label")
-      .data(colors.map((c) => c.key))
+      .data(uniqueLabels.map((c) => c.label))
       .enter()
       .append("text")
       .attr("x", 30)
