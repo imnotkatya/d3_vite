@@ -10,84 +10,6 @@ function createScale(colors, property) {
     .range(colors.map((c) => c[property]));
 }
 
-function write_lines(
-  svg,
-  lineRectangles,
-  x,
-  y,
-  stroke_color,
-  stroke_width,
-  stroke_dash,
-) {
-  return svg
-    .selectAll(".line")
-    .data(lineRectangles)
-    .enter()
-    .append("line")
-    .attr("class", "line")
-    .attr("x1", (d) => x(d.start))
-    .attr("x2", (d) => x(d.end))
-    .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
-    .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
-    .attr("stroke", (d) => stroke_color(d.type))
-    .attr("stroke-width", (d) => stroke_width(d.type))
-    .attr("stroke-dasharray", (d) => stroke_dash(d.type))
-    .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
-}
-
-function write_rects(
-  svg,
-  otherRectangles,
-  x,
-  y,
-  stroke_color,
-  stroke_width,
-  stroke_dash,
-  color,
-  y_modified,
-) {
-  return svg
-    .selectAll(".rects")
-    .data(otherRectangles)
-    .enter()
-    .append("rect")
-    .attr("stroke-dasharray", (d) => stroke_dash(d.type))
-    .attr("fill", (d) => color(d.type))
-    .attr("stroke", (d) => stroke_color(d.type))
-    .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
-    .attr("stroke-width", (d) => stroke_width(d.type))
-    .attr("y", (d) => y(d.name) + y_modified(d.type))
-    .attr("x", (d) => x(d.start))
-    .attr("height", y.bandwidth())
-    .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
-}
-
-function write_events(
-  svg,
-  parsedDataset_long,
-  x,
-  y,
-  symbol_size,
-  symbols,
-  color,
-  y_modified,
-  x_modified,
-) {
-  return svg
-    .selectAll(".event")
-    .data(parsedDataset_long.events)
-    .enter()
-    .append("text")
-    .attr("x", (d) => x(d.event) + x_modified(d.type))
-    .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
-    .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
-    .attr("fill", (d) => color(d.type))
-    .style("font-size", (d) => symbol_size(d.type))
-    .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
-    .style("text-anchor", "middle")
-    .text((d) => symbols(d.type));
-}
-
 export async function createChart(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -127,11 +49,60 @@ export async function createChart(container) {
     }));
 
     const dataset_Long_load = await aq.loadCSV("/src/data/death.csv");
-
     const dataset_Long = aq.from(dataset_Long_load);
     const parsedDataset_long = convertWideToLong(dataset_Long);
     const sortedData = sort(parsedDataset_long);
     const uniqueNames = sortedData.groupby("name").array("name");
+
+    function write_lines(lineRectangles) {
+      return svg
+        .selectAll(".line")
+        .data(lineRectangles)
+        .enter()
+        .append("line")
+        .attr("class", "line")
+        .attr("x1", (d) => x(d.start))
+        .attr("x2", (d) => x(d.end))
+        .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
+        .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
+        .attr("stroke", (d) => stroke_color(d.type))
+        .attr("stroke-width", (d) => stroke_width(d.type))
+        .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+        .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
+    }
+
+    function write_rects(otherRectangles) {
+      return svg
+        .selectAll(".rects")
+        .data(otherRectangles)
+        .enter()
+        .append("rect")
+        .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+        .attr("fill", (d) => color(d.type))
+        .attr("stroke", (d) => stroke_color(d.type))
+        .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
+        .attr("stroke-width", (d) => stroke_width(d.type))
+        .attr("y", (d) => y(d.name) + y_modified(d.type))
+        .attr("x", (d) => x(d.start))
+        .attr("height", y.bandwidth())
+        .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
+    }
+    function write_events(parsedDataset_long) {
+      return svg
+        .selectAll(".event")
+        .data(parsedDataset_long.events)
+        .enter()
+        .append("text")
+        .attr("x", (d) => x(d.event) + x_modified(d.type))
+        .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
+        .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
+        .attr("fill", (d) => color(d.type))
+        .style("font-size", (d) => symbol_size(d.type))
+        .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
+        .style("text-anchor", "middle")
+        .text((d) => symbols(d.type));
+    }
+
     container.innerHTML = "";
 
     const svg = d3
@@ -191,45 +162,17 @@ export async function createChart(container) {
       .call(d3.axisLeft(y));
 
     const lineRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type === "line",
+      (d) => d.type === "line"
     );
     const otherRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type !== "line",
+      (d) => d.type !== "line"
     );
 
-    write_lines(
-      svg,
-      lineRectangles,
-      x,
-      y,
-      stroke_color,
-      stroke_width,
-      stroke_dash,
-    );
+    write_lines(lineRectangles);
 
-    write_rects(
-      svg,
-      otherRectangles,
-      x,
-      y,
-      stroke_color,
-      stroke_width,
-      stroke_dash,
-      color,
-      y_modified,
-    );
+    write_rects(otherRectangles);
 
-    write_events(
-      svg,
-      parsedDataset_long,
-      x,
-      y,
-      symbol_size,
-      symbols,
-      color,
-      y_modified,
-      x_modified,
-    );
+    write_events(parsedDataset_long);
 
     const legendStartY = marginTop + 50;
     const legendItemHeight = 25;
@@ -239,7 +182,7 @@ export async function createChart(container) {
       .attr("class", "legend")
       .attr(
         "transform",
-        `translate(${width - marginRight + 50}, ${legendStartY})`,
+        `translate(${width - marginRight + 50}, ${legendStartY})`
       );
 
     const uniqueLabels = [...new Map(colors.map((d) => [d.label, d])).values()];
