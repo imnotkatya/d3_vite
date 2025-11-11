@@ -2,7 +2,12 @@ import * as d3 from "d3";
 import convertWideToLong from "./convertWideToLong";
 import sort from "./sort";
 import * as aq from "arquero";
-
+function createScale(colors, property) {
+  return d3
+    .scaleOrdinal()
+    .domain(colors.map((c) => c.key))
+    .range(colors.map((c) => c[property]));
+}
 export async function createChart(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -42,15 +47,10 @@ export async function createChart(container) {
     }));
 
     const dataset_Long_load = await aq.loadCSV("/src/data/death.csv");
-    // FIXME: ты конвертируешь в объекты, а потом снова делаешь arquero таблицу.
-    // Просто передавай таблицу в функции и
-    // возвращай тоже arquero таблицу.
 
     const dataset_Long = aq.from(dataset_Long_load);
     const parsedDataset_long = convertWideToLong(dataset_Long);
     const sortedData = sort(parsedDataset_long);
-
-    // const uniqueNames = [...new Set(sortedData.map((d) => d.name))];
     const uniqueNames = sortedData.groupby("name").array("name");
     container.innerHTML = "";
 
@@ -75,8 +75,8 @@ export async function createChart(container) {
       .attr("y", (d) => y(d) + y.bandwidth() / 2)
       .attr("dy", "4px")
       .text((d) => {
-        const patient = sortedData.filter(aq.op.equal("name", d)).objects()[0];
-        return patient?.ro;
+        const patient = sortedData.objects().find((p) => p.name === d);
+        return patient.ro;
       })
       .style("font-size", "12px")
       .style("text-anchor", "end");
@@ -93,45 +93,15 @@ export async function createChart(container) {
 
     // FIXME: Сделай хелпер для создания ординальной шкалы.
     // Вся разница в следующих 8 блоках кода — это функция передающаяся в range.
-    const color = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.color));
 
-    const stroke_color = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.stroke));
-
-    const stroke_dash = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.stroke_dash));
-
-    const stroke_width = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.strokeWidth));
-
-    const y_modified = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.y_modify));
-
-    const x_modified = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.x_modify));
-
-    const symbols = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.symbol));
-
-    const symbol_size = d3
-      .scaleOrdinal()
-      .domain(colors.map((c) => c.key))
-      .range(colors.map((c) => c.symbol_size));
+    const color = createScale(colors, "color");
+    const stroke_color = createScale(colors, "stroke");
+    const stroke_dash = createScale(colors, "stroke-dash");
+    const stroke_width = createScale(colors, "strokeWidth");
+    const y_modified = createScale(colors, "y_modify");
+    const x_modified = createScale(colors, "x_modify");
+    const symbols = createScale(colors, "symbol");
+    const symbol_size = createScale(colors, "symbol_size");
 
     svg
       .append("g")
