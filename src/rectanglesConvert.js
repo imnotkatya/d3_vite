@@ -20,7 +20,7 @@ export default function (dataset) {
       end: (d) =>
         (aq.op.parse_date(d.end) - aq.op.parse_date(d.zero)) /
         (1000 * 60 * 60 * 24),
-    })
-    .objects();
+    });
+
   return rectangles;
 }

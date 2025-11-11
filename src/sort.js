@@ -12,8 +12,6 @@ export default function (data) {
     .rollup({
       max_end: aq.op.max("end"),
     })
-    .orderby("max_end")
-    .objects();
-
+    .orderby("max_end");
   return combined;
 }

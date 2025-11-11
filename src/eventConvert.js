@@ -10,8 +10,7 @@ export default function (dataset) {
       event: (d) =>
         (aq.op.parse_date(d.event) - aq.op.parse_date(d.zero)) /
         (1000 * 60 * 60 * 24),
-    })
+    });
 
-    .objects();
   return events;
 }

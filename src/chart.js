@@ -25,7 +25,7 @@ export async function createChart(container) {
   const marginLeft = 300;
 
   try {
-    const stylesTable = await aq.loadCSV("/src/data/styles_labels.csv");
+    const stylesTable = await aq.loadCSV("/src/data/styles_labels_line.csv");
     const stylesData = stylesTable.objects();
 
     const colors = stylesData.map((d) => ({
@@ -45,10 +45,13 @@ export async function createChart(container) {
     // FIXME: ты конвертируешь в объекты, а потом снова делаешь arquero таблицу.
     // Просто передавай таблицу в функции и
     // возвращай тоже arquero таблицу.
-    const dataset_Long = dataset_Long_load.objects();
+
+    const dataset_Long = aq.from(dataset_Long_load);
     const parsedDataset_long = convertWideToLong(dataset_Long);
     const sortedData = sort(parsedDataset_long);
 
+    // const uniqueNames = [...new Set(sortedData.map((d) => d.name))];
+    const uniqueNames = sortedData.groupby("name").array("name");
     container.innerHTML = "";
 
     const svg = d3
@@ -57,8 +60,6 @@ export async function createChart(container) {
       .attr("width", width)
       .attr("height", height);
 
-    // FIXME: use `distinct` and `array` methods
-    const uniqueNames = [...new Set(sortedData.map((d) => d.name))];
     const y = d3
       .scaleBand()
       .domain(uniqueNames)
@@ -74,8 +75,8 @@ export async function createChart(container) {
       .attr("y", (d) => y(d) + y.bandwidth() / 2)
       .attr("dy", "4px")
       .text((d) => {
-        const patient = sortedData.find((p) => p.name === d);
-        return patient.ro;
+        const patient = sortedData.filter(aq.op.equal("name", d)).objects()[0];
+        return patient?.ro;
       })
       .style("font-size", "12px")
       .style("text-anchor", "end");
@@ -147,7 +148,7 @@ export async function createChart(container) {
     // только по разным файлам их не раскидывай, оставь в этом.
 
     const lineRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type === "line"
+      (d) => d.type === "line",
     );
 
     svg
@@ -166,7 +167,7 @@ export async function createChart(container) {
       .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
 
     const otherRectangles = parsedDataset_long.rectangles.filter(
-      (d) => d.type !== "line"
+      (d) => d.type !== "line",
     );
 
     svg
@@ -206,7 +207,7 @@ export async function createChart(container) {
       .attr("class", "legend")
       .attr(
         "transform",
-        `translate(${width - marginRight + 50}, ${legendStartY})`
+        `translate(${width - marginRight + 50}, ${legendStartY})`,
       );
 
     const uniqueLabels = [...new Map(colors.map((d) => [d.label, d])).values()];
