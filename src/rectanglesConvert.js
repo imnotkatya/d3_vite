@@ -1,6 +1,6 @@
 import * as aq from "arquero";
 
-export function rectangles_convert(dataset) {
+export default function (dataset) {
   const rectangles = aq
     .from(dataset)
     .select("name", aq.endswith("___start"), aq.endswith("___end"), "zero")
@@ -20,7 +20,7 @@ export function rectangles_convert(dataset) {
       end: (d) =>
         (aq.op.parse_date(d.end) - aq.op.parse_date(d.zero)) /
         (1000 * 60 * 60 * 24),
-    })
-    .objects();
+    });
+
   return rectangles;
 }

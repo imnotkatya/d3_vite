@@ -1,5 +1,5 @@
 import * as aq from "arquero";
-export function events_convert(dataset) {
+export default function (dataset) {
   const events = aq
     .from(dataset)
     .select("name", aq.endswith("___event"), "zero")
@@ -10,8 +10,7 @@ export function events_convert(dataset) {
       event: (d) =>
         (aq.op.parse_date(d.event) - aq.op.parse_date(d.zero)) /
         (1000 * 60 * 60 * 24),
-    })
+    });
 
-    .objects();
   return events;
 }
