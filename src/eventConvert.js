@@ -6,7 +6,7 @@ export default function (dataset) {
     .fold(aq.endswith("___event"), { as: ["event_key", "event"] })
     .filter((d) => d.event)
     .derive({
-      type: (d) => aq.op.replace(d.event_key, "___event", ""),
+      nameOfFigure: (d) => aq.op.replace(d.event_key, "___event", ""),
       event: (d) =>
         (aq.op.parse_date(d.event) - aq.op.parse_date(d.zero)) /
         (1000 * 60 * 60 * 24),

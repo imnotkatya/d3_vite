@@ -11,7 +11,7 @@ export default function (dataset) {
       end_key: (d) => aq.op.replace(d.end_key, "___end", ""),
     })
     .filter((d) => d.start_key === d.end_key)
-    .rename({ start_key: "type", end_key: "type" })
+    .rename({ start_key: "nameOfFigure", end_key: "nameOfFigure" })
     .filter((d) => d.start)
     .derive({
       start: (d) =>

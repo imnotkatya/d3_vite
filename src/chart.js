@@ -37,6 +37,7 @@ export async function createChart(container) {
 
     const colors = stylesData.map((d) => ({
       key: d.key,
+      type: d.type,
       color: d.color,
       label: d.label,
       strokeDash: +d.stroke_dash,
@@ -65,9 +66,9 @@ export async function createChart(container) {
         .attr("x2", (d) => x(d.end))
         .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
         .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
-        .attr("stroke", (d) => strokeColor(d.type))
-        .attr("stroke-width", (d) => strokeWidth(d.type))
-        .attr("stroke-dasharray", (d) => strokeDash(d.type))
+        .attr("stroke", (d) => strokeColor(d.nameOfFigure))
+        .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
+        .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
         .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
     }
 
@@ -77,12 +78,12 @@ export async function createChart(container) {
         .data(otherRectangles)
         .enter()
         .append("rect")
-        .attr("stroke-dasharray", (d) => strokeDash(d.type))
-        .attr("fill", (d) => color(d.type))
-        .attr("stroke", (d) => strokeColor(d.type))
+        .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
+        .attr("fill", (d) => color(d.nameOfFigure))
+        .attr("stroke", (d) => strokeColor(d.nameOfFigure))
         .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
-        .attr("stroke-width", (d) => strokeWidth(d.type))
-        .attr("y", (d) => y(d.name) + yModified(d.type))
+        .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
+        .attr("y", (d) => y(d.name) + yModified(d.nameOfFigure))
         .attr("x", (d) => x(d.start))
         .attr("height", y.bandwidth())
         .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
@@ -93,14 +94,17 @@ export async function createChart(container) {
         .data(parsedDatasetLong.events)
         .enter()
         .append("text")
-        .attr("x", (d) => x(d.event) + xModified(d.type))
-        .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + yModified(d.type))
+        .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
+        .attr(
+          "y",
+          (d) => y(d.name) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
+        )
         .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
-        .attr("fill", (d) => color(d.type))
-        .style("font-size", (d) => symbolSize(d.type))
+        .attr("fill", (d) => color(d.nameOfFigure))
+        .style("font-size", (d) => symbolSize(d.nameOfFigure))
         .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
         .style("text-anchor", "middle")
-        .text((d) => symbols(d.type));
+        .text((d) => symbols(d.nameOfFigure));
     }
 
     container.innerHTML = "";
@@ -160,14 +164,16 @@ export async function createChart(container) {
       .append("g")
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y));
+    const typeFigure = createScale(colors, "type");
+    const rectanglesArray = parsedDatasetLong.rectangles.objects();
 
-    const lineRectangles = parsedDatasetLong.rectangles.filter(
-      (d) => d.type === "line"
-    );
-    const otherRectangles = parsedDatasetLong.rectangles.filter(
-      (d) => d.type !== "line"
+    const lineRectangles = rectanglesArray.filter(
+      (d) => typeFigure(d.nameOfFigure) === "line"
     );
 
+    const otherRectangles = rectanglesArray.filter(
+      (d) => typeFigure(d.nameOfFigure) !== "line"
+    );
     drawLines(lineRectangles);
 
     drawRects(otherRectangles);

@@ -1,9 +1,11 @@
 import * as aq from "arquero";
 export default function (data) {
-  const rects = aq.from(data.rectangles).select("name", "start", "end", "type");
+  const rects = aq
+    .from(data.rectangles)
+    .select("name", "start", "end", "nameOfFigure");
   const events = aq
     .from(data.events)
-    .select("name", "event", "type")
+    .select("name", "event", "nameOfFigure")
     .rename({ event: "end" });
 
   const combined = rects
