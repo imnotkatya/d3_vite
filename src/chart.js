@@ -39,22 +39,22 @@ export async function createChart(container) {
       key: d.key,
       color: d.color,
       label: d.label,
-      stroke_dash: +d.stroke_dash,
-      y_modify: +d.y_modify,
-      x_modify: +d.x_modify,
+      strokeDash: +d.stroke_dash,
+      yModify: +d.y_modify,
+      xModify: +d.x_modify,
       stroke: d.stroke,
       symbol: d.symbol,
-      symbol_size: +d.symbol_size,
+      symbolSize: +d.symbol_size,
       strokeWidth: +d["stroke-width"],
     }));
 
-    const dataset_Long_load = await aq.loadCSV("/src/data/death.csv");
-    const dataset_Long = aq.from(dataset_Long_load);
-    const parsedDataset_long = convertWideToLong(dataset_Long);
-    const sortedData = sort(parsedDataset_long);
+    const datasetLongLoad = await aq.loadCSV("/src/data/death.csv");
+    const datasetLong = aq.from(datasetLongLoad);
+    const parsedDatasetLong = convertWideToLong(datasetLong);
+    const sortedData = sort(parsedDatasetLong);
     const uniqueNames = sortedData.groupby("name").array("name");
 
-    function write_lines(lineRectangles) {
+    function drawLines(lineRectangles) {
       return svg
         .selectAll(".line")
         .data(lineRectangles)
@@ -65,39 +65,39 @@ export async function createChart(container) {
         .attr("x2", (d) => x(d.end))
         .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
         .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
-        .attr("stroke", (d) => stroke_color(d.type))
-        .attr("stroke-width", (d) => stroke_width(d.type))
-        .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+        .attr("stroke", (d) => strokeColor(d.type))
+        .attr("stroke-width", (d) => strokeWidth(d.type))
+        .attr("stroke-dasharray", (d) => strokeDash(d.type))
         .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
     }
 
-    function write_rects(otherRectangles) {
+    function drawRects(otherRectangles) {
       return svg
         .selectAll(".rects")
         .data(otherRectangles)
         .enter()
         .append("rect")
-        .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+        .attr("stroke-dasharray", (d) => strokeDash(d.type))
         .attr("fill", (d) => color(d.type))
-        .attr("stroke", (d) => stroke_color(d.type))
+        .attr("stroke", (d) => strokeColor(d.type))
         .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
-        .attr("stroke-width", (d) => stroke_width(d.type))
-        .attr("y", (d) => y(d.name) + y_modified(d.type))
+        .attr("stroke-width", (d) => strokeWidth(d.type))
+        .attr("y", (d) => y(d.name) + yModified(d.type))
         .attr("x", (d) => x(d.start))
         .attr("height", y.bandwidth())
         .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
     }
-    function write_events(parsedDataset_long) {
+    function drawEvents(parsedDatasetLong) {
       return svg
         .selectAll(".event")
-        .data(parsedDataset_long.events)
+        .data(parsedDatasetLong.events)
         .enter()
         .append("text")
-        .attr("x", (d) => x(d.event) + x_modified(d.type))
-        .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
+        .attr("x", (d) => x(d.event) + xModified(d.type))
+        .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + yModified(d.type))
         .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
         .attr("fill", (d) => color(d.type))
-        .style("font-size", (d) => symbol_size(d.type))
+        .style("font-size", (d) => symbolSize(d.type))
         .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
         .style("text-anchor", "middle")
         .text((d) => symbols(d.type));
@@ -143,13 +143,13 @@ export async function createChart(container) {
       .range([marginLeft, width - marginRight]);
 
     const color = createScale(colors, "color");
-    const stroke_color = createScale(colors, "stroke");
-    const stroke_dash = createScale(colors, "stroke-dash");
-    const stroke_width = createScale(colors, "strokeWidth");
-    const y_modified = createScale(colors, "y_modify");
-    const x_modified = createScale(colors, "x_modify");
+    const strokeColor = createScale(colors, "stroke");
+    const strokeDash = createScale(colors, "strokeDash");
+    const strokeWidth = createScale(colors, "strokeWidth");
+    const yModified = createScale(colors, "yModify");
+    const xModified = createScale(colors, "xModify");
+    const symbolSize = createScale(colors, "symbolSize");
     const symbols = createScale(colors, "symbol");
-    const symbol_size = createScale(colors, "symbol_size");
 
     svg
       .append("g")
@@ -161,18 +161,18 @@ export async function createChart(container) {
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y));
 
-    const lineRectangles = parsedDataset_long.rectangles.filter(
+    const lineRectangles = parsedDatasetLong.rectangles.filter(
       (d) => d.type === "line"
     );
-    const otherRectangles = parsedDataset_long.rectangles.filter(
+    const otherRectangles = parsedDatasetLong.rectangles.filter(
       (d) => d.type !== "line"
     );
 
-    write_lines(lineRectangles);
+    drawLines(lineRectangles);
 
-    write_rects(otherRectangles);
+    drawRects(otherRectangles);
 
-    write_events(parsedDataset_long);
+    drawEvents(parsedDatasetLong);
 
     const legendStartY = marginTop + 50;
     const legendItemHeight = 25;
@@ -198,10 +198,10 @@ export async function createChart(container) {
           .attr("y", i * legendItemHeight)
           .attr("text-anchor", "start")
           .attr("dy", "0.35em")
-          .style("font-size", symbol_size(key))
+          .style("font-size", symbolSize(key))
           .text(symbol)
           .style("fill", color(key))
-          .attr("stroke", stroke_color(key))
+          .attr("stroke", strokeColor(key))
           .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
           .attr("stroke-width", 0.5);
       } else {
@@ -212,9 +212,9 @@ export async function createChart(container) {
             .attr("x2", 20)
             .attr("y1", i * legendItemHeight)
             .attr("y2", i * legendItemHeight)
-            .attr("stroke", stroke_color(key))
-            .attr("stroke-width", stroke_width(key))
-            .attr("stroke-dasharray", stroke_dash(key));
+            .attr("stroke", strokeColor(key))
+            .attr("stroke-width", strokeWidth(key))
+            .attr("stroke-dasharray", strokeDash(key));
         } else {
           legendGroup
             .append("rect")
@@ -222,9 +222,9 @@ export async function createChart(container) {
             .attr("y", i * legendItemHeight - 10)
             .attr("width", 20)
             .attr("height", 15)
-            .attr("stroke", stroke_color(key))
-            .attr("stroke-dasharray", stroke_dash(key))
-            .attr("stroke-width", stroke_width(key))
+            .attr("stroke", strokeColor(key))
+            .attr("stroke-dasharray", strokeDash(key))
+            .attr("stroke-width", strokeWidth(key))
             .style("fill", color(key));
         }
       }
