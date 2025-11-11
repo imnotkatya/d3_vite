@@ -2,12 +2,92 @@ import * as d3 from "d3";
 import convertWideToLong from "./convertWideToLong";
 import sort from "./sort";
 import * as aq from "arquero";
+
 function createScale(colors, property) {
   return d3
     .scaleOrdinal()
     .domain(colors.map((c) => c.key))
     .range(colors.map((c) => c[property]));
 }
+
+function write_lines(
+  svg,
+  lineRectangles,
+  x,
+  y,
+  stroke_color,
+  stroke_width,
+  stroke_dash,
+) {
+  return svg
+    .selectAll(".line")
+    .data(lineRectangles)
+    .enter()
+    .append("line")
+    .attr("class", "line")
+    .attr("x1", (d) => x(d.start))
+    .attr("x2", (d) => x(d.end))
+    .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
+    .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
+    .attr("stroke", (d) => stroke_color(d.type))
+    .attr("stroke-width", (d) => stroke_width(d.type))
+    .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+    .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
+}
+
+function write_rects(
+  svg,
+  otherRectangles,
+  x,
+  y,
+  stroke_color,
+  stroke_width,
+  stroke_dash,
+  color,
+  y_modified,
+) {
+  return svg
+    .selectAll(".rects")
+    .data(otherRectangles)
+    .enter()
+    .append("rect")
+    .attr("stroke-dasharray", (d) => stroke_dash(d.type))
+    .attr("fill", (d) => color(d.type))
+    .attr("stroke", (d) => stroke_color(d.type))
+    .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
+    .attr("stroke-width", (d) => stroke_width(d.type))
+    .attr("y", (d) => y(d.name) + y_modified(d.type))
+    .attr("x", (d) => x(d.start))
+    .attr("height", y.bandwidth())
+    .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
+}
+
+function write_events(
+  svg,
+  parsedDataset_long,
+  x,
+  y,
+  symbol_size,
+  symbols,
+  color,
+  y_modified,
+  x_modified,
+) {
+  return svg
+    .selectAll(".event")
+    .data(parsedDataset_long.events)
+    .enter()
+    .append("text")
+    .attr("x", (d) => x(d.event) + x_modified(d.type))
+    .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
+    .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
+    .attr("fill", (d) => color(d.type))
+    .style("font-size", (d) => symbol_size(d.type))
+    .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
+    .style("text-anchor", "middle")
+    .text((d) => symbols(d.type));
+}
+
 export async function createChart(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -91,9 +171,6 @@ export async function createChart(container) {
       .domain([0, 10])
       .range([marginLeft, width - marginRight]);
 
-    // FIXME: Сделай хелпер для создания ординальной шкалы.
-    // Вся разница в следующих 8 блоках кода — это функция передающаяся в range.
-
     const color = createScale(colors, "color");
     const stroke_color = createScale(colors, "stroke");
     const stroke_dash = createScale(colors, "stroke-dash");
@@ -113,61 +190,46 @@ export async function createChart(container) {
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y));
 
-    // FIXME: отрисовку линий, прямоугольников и легенды тоже лучше поместить в отдельные функции
-    // так легче читать код
-    // только по разным файлам их не раскидывай, оставь в этом.
-
     const lineRectangles = parsedDataset_long.rectangles.filter(
       (d) => d.type === "line",
     );
-
-    svg
-      .selectAll(".line")
-      .data(lineRectangles)
-      .enter()
-      .append("line")
-      .attr("class", "line")
-      .attr("x1", (d) => x(d.start))
-      .attr("x2", (d) => x(d.end))
-      .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
-      .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
-      .attr("stroke", (d) => stroke_color(d.type))
-      .attr("stroke-width", (d) => stroke_width(d.type))
-      .attr("stroke-dasharray", (d) => stroke_dash(d.type))
-      .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
-
     const otherRectangles = parsedDataset_long.rectangles.filter(
       (d) => d.type !== "line",
     );
 
-    svg
-      .selectAll(".rects")
-      .data(otherRectangles)
-      .enter()
-      .append("rect")
-      .attr("stroke-dasharray", (d) => stroke_dash(d.type))
-      .attr("fill", (d) => color(d.type))
-      .attr("stroke", (d) => stroke_color(d.type))
-      .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
-      .attr("stroke-width", (d) => stroke_width(d.type))
-      .attr("y", (d) => y(d.name) + y_modified(d.type))
-      .attr("x", (d) => x(d.start))
-      .attr("height", y.bandwidth())
-      .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
+    write_lines(
+      svg,
+      lineRectangles,
+      x,
+      y,
+      stroke_color,
+      stroke_width,
+      stroke_dash,
+    );
 
-    svg
-      .selectAll(".event")
-      .data(parsedDataset_long.events)
-      .enter()
-      .append("text")
-      .attr("x", (d) => x(d.event) + x_modified(d.type))
-      .attr("y", (d) => y(d.name) + y.bandwidth() / 2 + y_modified(d.type))
-      .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
-      .attr("fill", (d) => color(d.type))
-      .style("font-size", (d) => symbol_size(d.type))
-      .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
-      .style("text-anchor", "middle")
-      .text((d) => symbols(d.type));
+    write_rects(
+      svg,
+      otherRectangles,
+      x,
+      y,
+      stroke_color,
+      stroke_width,
+      stroke_dash,
+      color,
+      y_modified,
+    );
+
+    write_events(
+      svg,
+      parsedDataset_long,
+      x,
+      y,
+      symbol_size,
+      symbols,
+      color,
+      y_modified,
+      x_modified,
+    );
 
     const legendStartY = marginTop + 50;
     const legendItemHeight = 25;
