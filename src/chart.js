@@ -120,10 +120,7 @@ export async function createChart(container) {
           `translate(${width - marginRight + 50}, ${legendStartY})`
         );
 
-      const uniqueLabels = [
-        ...new Map(colors.map((d) => [d.label, d])).values(),
-      ];
-
+      const uniqueLabels = aq.from(colors).dedupe("label").objects();
       uniqueLabels.forEach((colorObj, i) => {
         const key = colorObj.key;
         const symbol = symbols(key);
