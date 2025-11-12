@@ -9,7 +9,14 @@ function createScale(colors, property) {
     .domain(colors.map((c) => c.key))
     .range(colors.map((c) => c[property]));
 }
+function getDomainX(parsedDatasetLong) {
+  const times = [
+    ...parsedDatasetLong.rectangles.objects().flatMap((d) => [d.start, d.end]),
+    ...parsedDatasetLong.events.objects().map((d) => d.event),
+  ].filter((t) => t >= 0);
 
+  return d3.extent(times);
+}
 export async function createChart(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -205,11 +212,12 @@ export async function createChart(container) {
       .style("font-size", "12px")
       .style("text-anchor", "end");
 
+    const xDomain = getDomainX(parsedDatasetLong);
     const x = d3
       .scaleLinear()
-      .domain([0, 2400])
+      .domain(xDomain)
+      .nice()
       .range([marginLeft, width - marginRight]);
-
     const xAxis = d3
       .scaleLinear()
       .domain([0, 10])
