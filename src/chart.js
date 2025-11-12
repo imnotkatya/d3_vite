@@ -88,6 +88,7 @@ export async function createChart(container) {
         .attr("height", y.bandwidth())
         .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
     }
+
     function drawEvents(parsedDatasetLong) {
       return svg
         .selectAll(".event")
@@ -105,6 +106,77 @@ export async function createChart(container) {
         .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
         .style("text-anchor", "middle")
         .text((d) => symbols(d.nameOfFigure));
+    }
+
+    function drawLegend() {
+      const legendStartY = marginTop + 50;
+      const legendItemHeight = 25;
+
+      const legendGroup = svg
+        .append("g")
+        .attr("class", "legend")
+        .attr(
+          "transform",
+          `translate(${width - marginRight + 50}, ${legendStartY})`
+        );
+
+      const uniqueLabels = [
+        ...new Map(colors.map((d) => [d.label, d])).values(),
+      ];
+
+      uniqueLabels.forEach((colorObj, i) => {
+        const key = colorObj.key;
+        const symbol = symbols(key);
+
+        if (symbol) {
+          legendGroup
+            .append("text")
+            .attr("x", 0)
+            .attr("y", i * legendItemHeight)
+            .attr("text-anchor", "start")
+            .attr("dy", "0.35em")
+            .style("font-size", symbolSize(key))
+            .text(symbol)
+            .style("fill", color(key))
+            .attr("stroke", strokeColor(key))
+            .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
+            .attr("stroke-width", 0.5);
+        } else {
+          if (typeFigure(key) === "line") {
+            legendGroup
+              .append("line")
+              .attr("x1", 0)
+              .attr("x2", 20)
+              .attr("y1", i * legendItemHeight)
+              .attr("y2", i * legendItemHeight)
+              .attr("stroke", strokeColor(key))
+              .attr("stroke-width", strokeWidth(key))
+              .attr("stroke-dasharray", strokeDash(key));
+          } else {
+            legendGroup
+              .append("rect")
+              .attr("x", 0)
+              .attr("y", i * legendItemHeight - 10)
+              .attr("width", 20)
+              .attr("height", 15)
+              .attr("stroke", strokeColor(key))
+              .attr("stroke-dasharray", strokeDash(key))
+              .attr("stroke-width", strokeWidth(key))
+              .style("fill", color(key));
+          }
+        }
+      });
+
+      legendGroup
+        .selectAll(".legend-label")
+        .data(uniqueLabels)
+        .enter()
+        .append("text")
+        .attr("x", 30)
+        .attr("y", (d, i) => i * legendItemHeight)
+        .attr("dy", "0.35em")
+        .style("font-size", "12px")
+        .text((d) => d.label);
     }
 
     container.innerHTML = "";
@@ -154,6 +226,7 @@ export async function createChart(container) {
     const xModified = createScale(colors, "xModify");
     const symbolSize = createScale(colors, "symbolSize");
     const symbols = createScale(colors, "symbol");
+    const typeFigure = createScale(colors, "type");
 
     svg
       .append("g")
@@ -164,7 +237,7 @@ export async function createChart(container) {
       .append("g")
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y));
-    const typeFigure = createScale(colors, "type");
+
     const rectanglesArray = parsedDatasetLong.rectangles.objects();
 
     const lineRectangles = rectanglesArray.filter(
@@ -174,78 +247,11 @@ export async function createChart(container) {
     const otherRectangles = rectanglesArray.filter(
       (d) => typeFigure(d.nameOfFigure) !== "line"
     );
+
     drawLines(lineRectangles);
-
     drawRects(otherRectangles);
-
     drawEvents(parsedDatasetLong);
-
-    const legendStartY = marginTop + 50;
-    const legendItemHeight = 25;
-
-    const legendGroup = svg
-      .append("g")
-      .attr("class", "legend")
-      .attr(
-        "transform",
-        `translate(${width - marginRight + 50}, ${legendStartY})`
-      );
-
-    const uniqueLabels = [...new Map(colors.map((d) => [d.label, d])).values()];
-
-    uniqueLabels.forEach((colorObj, i) => {
-      const key = colorObj.key;
-      const symbol = symbols(key);
-
-      if (symbol) {
-        legendGroup
-          .append("text")
-          .attr("x", 0)
-          .attr("y", i * legendItemHeight)
-          .attr("text-anchor", "start")
-          .attr("dy", "0.35em")
-          .style("font-size", symbolSize(key))
-          .text(symbol)
-          .style("fill", color(key))
-          .attr("stroke", strokeColor(key))
-          .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
-          .attr("stroke-width", 0.5);
-      } else {
-        if (key === "line") {
-          legendGroup
-            .append("line")
-            .attr("x1", 0)
-            .attr("x2", 20)
-            .attr("y1", i * legendItemHeight)
-            .attr("y2", i * legendItemHeight)
-            .attr("stroke", strokeColor(key))
-            .attr("stroke-width", strokeWidth(key))
-            .attr("stroke-dasharray", strokeDash(key));
-        } else {
-          legendGroup
-            .append("rect")
-            .attr("x", 0)
-            .attr("y", i * legendItemHeight - 10)
-            .attr("width", 20)
-            .attr("height", 15)
-            .attr("stroke", strokeColor(key))
-            .attr("stroke-dasharray", strokeDash(key))
-            .attr("stroke-width", strokeWidth(key))
-            .style("fill", color(key));
-        }
-      }
-    });
-
-    legendGroup
-      .selectAll(".legend-label")
-      .data(uniqueLabels.map((c) => c.label))
-      .enter()
-      .append("text")
-      .attr("x", 30)
-      .attr("y", (d, i) => i * legendItemHeight)
-      .attr("dy", "0.35em")
-      .style("font-size", "12px")
-      .text((d) => d);
+    drawLegend();
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
