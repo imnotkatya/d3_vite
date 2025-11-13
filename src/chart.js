@@ -145,30 +145,32 @@ export async function createChart(container) {
             .attr("stroke", strokeColor(key))
             .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
             .attr("stroke-width", 0.5);
-        } else {
-          if (typeFigure(key) === "line") {
-            legendGroup
-              .append("line")
-              .attr("x1", 0)
-              .attr("x2", 20)
-              .attr("y1", i * legendItemHeight)
-              .attr("y2", i * legendItemHeight)
-              .attr("stroke", strokeColor(key))
-              .attr("stroke-width", strokeWidth(key))
-              .attr("stroke-dasharray", strokeDash(key));
-          } else {
-            legendGroup
-              .append("rect")
-              .attr("x", 0)
-              .attr("y", i * legendItemHeight - 10)
-              .attr("width", 20)
-              .attr("height", 15)
-              .attr("stroke", strokeColor(key))
-              .attr("stroke-dasharray", strokeDash(key))
-              .attr("stroke-width", strokeWidth(key))
-              .style("fill", color(key));
-          }
+          return;
         }
+
+        if (typeFigure(key) === "line") {
+          legendGroup
+            .append("line")
+            .attr("x1", 0)
+            .attr("x2", 20)
+            .attr("y1", i * legendItemHeight)
+            .attr("y2", i * legendItemHeight)
+            .attr("stroke", strokeColor(key))
+            .attr("stroke-width", strokeWidth(key))
+            .attr("stroke-dasharray", strokeDash(key));
+          return;
+        }
+
+        legendGroup
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", i * legendItemHeight - 10)
+          .attr("width", 20)
+          .attr("height", 15)
+          .attr("stroke", strokeColor(key))
+          .attr("stroke-dasharray", strokeDash(key))
+          .attr("stroke-width", strokeWidth(key))
+          .style("fill", color(key));
       });
 
       legendGroup
