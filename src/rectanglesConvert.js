@@ -1,9 +1,9 @@
 import * as aq from "arquero";
 
 export default function (dataset) {
-  const rectangles = aq
+  const rectanglesWithZero = aq
     .from(dataset)
-    .select("name", aq.endswith("___start"), aq.endswith("___end"), "zero")
+    .select("name", aq.endswith("___start"), aq.endswith("___end"))
     .fold(aq.endswith("___start"), { as: ["start_key", "start"] })
     .fold(aq.endswith("___end"), { as: ["end_key", "end"] })
     .derive({
@@ -14,13 +14,20 @@ export default function (dataset) {
     .rename({ start_key: "nameOfFigure", end_key: "nameOfFigure" })
     .filter((d) => d.start)
     .derive({
-      start: (d) =>
-        (aq.op.parse_date(d.start) - aq.op.parse_date(d.zero)) /
-        (1000 * 60 * 60 * 24),
-      end: (d) =>
-        (aq.op.parse_date(d.end) - aq.op.parse_date(d.zero)) /
-        (1000 * 60 * 60 * 24),
+      start_date: (d) => aq.op.parse_date(d.start),
+      end_date: (d) => aq.op.parse_date(d.end),
+    })
+    .groupby("name")
+    .derive({
+      zero: aq.op.min("start_date"),
     });
+
+  const rectangles = rectanglesWithZero
+    .derive({
+      start: (d) => (d.start_date - d.zero) / (1000 * 60 * 60 * 24),
+      end: (d) => (d.end_date - d.zero) / (1000 * 60 * 60 * 24),
+    })
+    .select("name", "nameOfFigure", "start", "end", "zero");
 
   return rectangles;
 }
