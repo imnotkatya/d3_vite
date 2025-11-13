@@ -56,7 +56,7 @@ export async function createChart(container) {
       strokeWidth: +d["stroke-width"],
     }));
 
-    const datasetLongLoad = await aq.loadCSV("/src/data/death.csv");
+    const datasetLongLoad = await aq.loadCSV("/src/data/data_without_zero.csv");
     const datasetLong = aq.from(datasetLongLoad);
     const parsedDatasetLong = convertWideToLong(datasetLong);
     const sortedData = sort(parsedDatasetLong);
