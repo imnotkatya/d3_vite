@@ -56,9 +56,10 @@ export async function createChart(container) {
       strokeWidth: +d["stroke-width"],
     }));
 
-    const datasetLongLoad = await aq.loadCSV("/src/data/death.csv");
+    const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
     const datasetLong = aq.from(datasetLongLoad);
-    const parsedDatasetLong = convertWideToLong(datasetLong);
+    const minD = stylesData[0].key;
+    const parsedDatasetLong = convertWideToLong(datasetLong, minD);
     const sortedData = sort(parsedDatasetLong);
     const uniqueNames = sortedData.groupby("name").array("name");
 

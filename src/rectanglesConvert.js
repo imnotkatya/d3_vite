@@ -1,9 +1,13 @@
 import * as aq from "arquero";
 
-export default function (dataset) {
+export default function (dataset, minD) {
+  const val = minD + "___start";
   const rectangles = aq
     .from(dataset)
-    .select("name", aq.endswith("___start"), aq.endswith("___end"), "zero")
+    .select("name", aq.endswith("___start"), aq.endswith("___end"))
+    .derive({
+      minDate: aq.escape((d) => d[val]),
+    })
     .fold(aq.endswith("___start"), { as: ["start_key", "start"] })
     .fold(aq.endswith("___end"), { as: ["end_key", "end"] })
     .derive({
@@ -15,10 +19,10 @@ export default function (dataset) {
     .filter((d) => d.start)
     .derive({
       start: (d) =>
-        (aq.op.parse_date(d.start) - aq.op.parse_date(d.zero)) /
+        (aq.op.parse_date(d.start) - aq.op.parse_date(d.minDate)) /
         (1000 * 60 * 60 * 24),
       end: (d) =>
-        (aq.op.parse_date(d.end) - aq.op.parse_date(d.zero)) /
+        (aq.op.parse_date(d.end) - aq.op.parse_date(d.minDate)) /
         (1000 * 60 * 60 * 24),
     });
 
