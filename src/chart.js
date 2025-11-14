@@ -11,11 +11,11 @@ function createScale(colors, property) {
     .range(colors.map((c) => c[property]));
 }
 function getDomainX(parsedDatasetLong) {
-  const times = [
-    ...parsedDatasetLong.rectangles.objects().flatMap((d) => [d.start, d.end]), //use arquero
-    ...parsedDatasetLong.events.objects().map((d) => d.event),
-  ].filter((t) => t >= 0);
-
+  const times = parsedDatasetLong.rectangles
+    .fold(["start", "end"], { as: ["type", "time"] })
+    .concat(parsedDatasetLong.events.rename({ event: "time" }))
+    .filter((d) => d.time >= 0)
+    .array("time");
   return d3.extent(times);
 }
 export async function createChart(container) {
@@ -216,12 +216,12 @@ export async function createChart(container) {
       })
       .style("font-size", "12px")
       .style("text-anchor", "end");
-    // / 365.25
+
     const x = d3
       .scaleLinear()
       .domain(getDomainX(parsedDatasetLong))
       .nice()
-      .range([marginLeft, width - marginRight]); //convert to year
+      .range([marginLeft, width - marginRight]);
 
     const color = createScale(colors, "color");
     const strokeColor = createScale(colors, "stroke");
