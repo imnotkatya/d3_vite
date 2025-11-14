@@ -12,7 +12,7 @@ function createScale(colors, property) {
 }
 function getDomainX(parsedDatasetLong) {
   const times = [
-    ...parsedDatasetLong.rectangles.objects().flatMap((d) => [d.start, d.end]),
+    ...parsedDatasetLong.rectangles.objects().flatMap((d) => [d.start, d.end]), //use arquero
     ...parsedDatasetLong.events.objects().map((d) => d.event),
   ].filter((t) => t >= 0);
 
@@ -58,10 +58,10 @@ export async function createChart(container) {
     }));
 
     const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
-    const datasetLong = parseDate(aq.from(datasetLongLoad));
-    const minD = stylesData[0].key;
 
-    const parsedDatasetLong = convertWideToLong(datasetLong, minD);
+    const minD = stylesData[0].key;
+    const datasetLong = parseDate(datasetLongLoad, minD);
+    const parsedDatasetLong = convertWideToLong(datasetLong);
     const sortedData = sort(parsedDatasetLong);
     const uniqueNames = sortedData.groupby("name").array("name");
 
@@ -216,16 +216,12 @@ export async function createChart(container) {
       })
       .style("font-size", "12px")
       .style("text-anchor", "end");
-
+    // / 365.25
     const x = d3
       .scaleLinear()
       .domain(getDomainX(parsedDatasetLong))
       .nice()
-      .range([marginLeft, width - marginRight]);
-    const xAxis = d3
-      .scaleLinear()
-      .domain([0, 10])
-      .range([marginLeft, width - marginRight]);
+      .range([marginLeft, width - marginRight]); //convert to year
 
     const color = createScale(colors, "color");
     const strokeColor = createScale(colors, "stroke");
@@ -240,7 +236,7 @@ export async function createChart(container) {
     svg
       .append("g")
       .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(xAxis));
+      .call(d3.axisBottom(x));
 
     svg
       .append("g")
