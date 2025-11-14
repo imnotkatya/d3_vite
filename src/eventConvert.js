@@ -1,7 +1,10 @@
 import * as aq from "arquero";
 
 export default function (dataset, minD) {
-  const val = minD + "___start";
+  const availableColumns = dataset.columnNames();
+  const val =
+    availableColumns.find((col) => col === minD + "___event") ||
+    availableColumns.find((col) => col === minD + "___start");
 
   const events = aq
     .from(dataset)

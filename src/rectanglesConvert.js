@@ -1,13 +1,16 @@
 import * as aq from "arquero";
 
 export default function (dataset, minD) {
-  //check for event also
-  const val = minD + "___start";
+  const availableColumns = dataset.columnNames();
+  const val =
+    availableColumns.find((col) => col === minD + "___event") ||
+    availableColumns.find((col) => col === minD + "___start");
+
   const rectangles = aq
     .from(dataset)
     .select("name", aq.endswith("___start"), aq.endswith("___end"))
     .derive({
-      minDate: aq.escape((d) => d[val]), //into another func
+      minDate: aq.escape((d) => d[val]),
     })
     .fold(aq.endswith("___start"), { as: ["start_key", "start"] })
     .fold(aq.endswith("___end"), { as: ["end_key", "end"] })
