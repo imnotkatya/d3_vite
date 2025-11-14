@@ -3,6 +3,7 @@ import convertWideToLong from "./convertWideToLong";
 import parseDate from "./parseDate";
 import sort from "./sort";
 import * as aq from "arquero";
+import TableData from "./TableData";
 
 function createScale(colors, property) {
   return d3
@@ -63,9 +64,9 @@ export async function createChart(container) {
     const datasetLong = parseDate(datasetLongLoad, minD);
     const parsedDatasetLong = convertWideToLong(datasetLong);
     const sortedData = sort(parsedDatasetLong);
-
+    const tableData = TableData(datasetLong, minD);
     const uniqueNames = sortedData.groupby("rowNumber").array("rowNumber");
-    console.log(uniqueNames);
+    console.log(tableData.objects());
     function drawLines(lineRectangles) {
       return svg
         .selectAll(".line")
