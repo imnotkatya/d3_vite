@@ -63,8 +63,9 @@ export async function createChart(container) {
     const datasetLong = parseDate(datasetLongLoad, minD);
     const parsedDatasetLong = convertWideToLong(datasetLong);
     const sortedData = sort(parsedDatasetLong);
-    const uniqueNames = sortedData.groupby("name").array("name");
 
+    const uniqueNames = sortedData.groupby("rowNumber").array("rowNumber");
+    console.log(uniqueNames);
     function drawLines(lineRectangles) {
       return svg
         .selectAll(".line")
@@ -74,8 +75,8 @@ export async function createChart(container) {
         .attr("class", "line")
         .attr("x1", (d) => x(d.start))
         .attr("x2", (d) => x(d.end))
-        .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
-        .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
+        .attr("y1", (d) => y(d.rowNumber) + y.bandwidth() / 2)
+        .attr("y2", (d) => y(d.rowNumber) + y.bandwidth() / 2)
         .attr("stroke", (d) => strokeColor(d.nameOfFigure))
         .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
         .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
@@ -93,7 +94,7 @@ export async function createChart(container) {
         .attr("stroke", (d) => strokeColor(d.nameOfFigure))
         .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
         .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
-        .attr("y", (d) => y(d.name) + yModified(d.nameOfFigure))
+        .attr("y", (d) => y(d.rowNumber) + yModified(d.nameOfFigure))
         .attr("x", (d) => x(d.start))
         .attr("height", y.bandwidth())
         .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
@@ -108,7 +109,7 @@ export async function createChart(container) {
         .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
         .attr(
           "y",
-          (d) => y(d.name) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
+          (d) => y(d.rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
         )
         .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
         .attr("fill", (d) => color(d.nameOfFigure))
@@ -202,21 +203,6 @@ export async function createChart(container) {
       .paddingInner(0.5)
       .range([height - marginBottom, marginTop]);
 
-    svg
-      .selectAll(".patient-ro")
-      .data(uniqueNames)
-      .enter()
-      .append("text")
-      .attr("x", marginLeft - 70)
-      .attr("y", (d) => y(d) + y.bandwidth() / 2)
-      .attr("dy", "4px")
-      .text((d) => {
-        const patient = sortedData.objects().find((p) => p.name === d);
-        return patient.ro;
-      })
-      .style("font-size", "12px")
-      .style("text-anchor", "end");
-
     const x = d3
       .scaleLinear()
       .domain(getDomainX(parsedDatasetLong))
@@ -241,7 +227,7 @@ export async function createChart(container) {
     svg
       .append("g")
       .attr("transform", `translate(${marginLeft},0)`)
-      .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y).tickFormat(""));
 
     const rectanglesArray = parsedDatasetLong.rectangles.objects();
 

@@ -10,6 +10,7 @@ export default function (dataset, minD) {
     .from(dataset)
     .derive({
       minDate: aq.escape((d) => d[val]),
+      rowNumber: aq.op.row_number(),
     })
     .derive(
       Object.fromEntries(
