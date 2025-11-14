@@ -217,10 +217,9 @@ export async function createChart(container) {
       .style("font-size", "12px")
       .style("text-anchor", "end");
 
-    const xDomain = getDomainX(parsedDatasetLong);
     const x = d3
       .scaleLinear()
-      .domain(xDomain)
+      .domain(getDomainX(parsedDatasetLong))
       .nice()
       .range([marginLeft, width - marginRight]);
     const xAxis = d3
