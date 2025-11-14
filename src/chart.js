@@ -1,5 +1,6 @@
 import * as d3 from "d3";
 import convertWideToLong from "./convertWideToLong";
+import parseDate from "./parseDate";
 import sort from "./sort";
 import * as aq from "arquero";
 
@@ -57,8 +58,9 @@ export async function createChart(container) {
     }));
 
     const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
-    const datasetLong = aq.from(datasetLongLoad);
+    const datasetLong = parseDate(aq.from(datasetLongLoad));
     const minD = stylesData[0].key;
+
     const parsedDatasetLong = convertWideToLong(datasetLong, minD);
     const sortedData = sort(parsedDatasetLong);
     const uniqueNames = sortedData.groupby("name").array("name");

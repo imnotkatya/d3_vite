@@ -13,9 +13,7 @@ export default function (dataset, minD) {
     .filter((d) => d.event)
     .derive({
       nameOfFigure: (d) => aq.op.replace(d.event_key, "___event", ""),
-      event: (d) =>
-        (aq.op.parse_date(d.event) - aq.op.parse_date(d.minDate)) /
-        (1000 * 60 * 60 * 24),
+      event: (d) => d.event - d.minDate,
     });
 
   return events;
