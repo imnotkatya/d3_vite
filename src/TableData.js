@@ -6,5 +6,5 @@ export default function (dataset, minD) {
   const minDate =
     columns.indexOf(minD + "___start") || columns.indexOf(minD + "___event");
 
-  return table.select(aq.range(0, minDate));
+  return table.select(aq.range(0, minDate - 2));
 }
