@@ -59,7 +59,6 @@ export async function createChart(container) {
     }));
 
     const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
-
     const minD = stylesData[0].key;
     const datasetLong = parseDate(datasetLongLoad, minD);
     const parsedDatasetLong = convertWideToLong(datasetLong);
@@ -130,7 +129,7 @@ export async function createChart(container) {
           .rollup({ max_length: aq.op.max("field_length") })
           .object().max_length;
 
-        return maxLength * 8 + 20;
+        return maxLength + 180;
       });
 
       fields.forEach((field, fieldIndex) => {
@@ -149,6 +148,7 @@ export async function createChart(container) {
           )
           //rownuber instead of i
           .attr("y", (d, i) => y(i + 1) + y.bandwidth() / 2)
+          .attr("text-anchor", "middle")
           .text((d) => d[field]);
       });
     }
