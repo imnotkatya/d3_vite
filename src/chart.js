@@ -137,7 +137,7 @@ export async function createChart(container) {
 
       fields.forEach((field, fieldIndex) => {
         svg
-          .selectAll(`.patient-${field}`)
+          .selectAll(`table_rows`)
           .data(patients)
           .enter()
           .append("text")
