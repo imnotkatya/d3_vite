@@ -33,7 +33,7 @@ export async function createChart(container) {
   `;
   document.head.appendChild(style);
 
-  const width = 1650;
+  const width = 1700;
   const height = 1000;
   const marginTop = 230;
   const marginRight = 250;
@@ -64,8 +64,10 @@ export async function createChart(container) {
     const datasetLong = parseDate(datasetLongLoad, minD);
     const parsedDatasetLong = convertWideToLong(datasetLong);
     const sortedData = sort(parsedDatasetLong);
-
-    const uniqueNames = sortedData.groupby("rowNumber").array("rowNumber");
+    const tableData = makeTable(datasetLong, minD);
+    const patients = tableData.objects();
+    const fields = tableData.columnNames();
+    const uniqueNames = sortedData.groupby("_rowNumber").array("_rowNumber");
 
     function drawLines(lineRectangles) {
       return svg
@@ -76,8 +78,8 @@ export async function createChart(container) {
         .attr("class", "line")
         .attr("x1", (d) => x(d.start))
         .attr("x2", (d) => x(d.end))
-        .attr("y1", (d) => y(d.rowNumber) + y.bandwidth() / 2)
-        .attr("y2", (d) => y(d.rowNumber) + y.bandwidth() / 2)
+        .attr("y1", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+        .attr("y2", (d) => y(d._rowNumber) + y.bandwidth() / 2)
         .attr("stroke", (d) => strokeColor(d.nameOfFigure))
         .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
         .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
@@ -95,7 +97,7 @@ export async function createChart(container) {
         .attr("stroke", (d) => strokeColor(d.nameOfFigure))
         .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
         .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
-        .attr("y", (d) => y(d.rowNumber) + yModified(d.nameOfFigure))
+        .attr("y", (d) => y(d._rowNumber) + yModified(d.nameOfFigure))
         .attr("x", (d) => x(d.start))
         .attr("height", y.bandwidth())
         .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
@@ -110,7 +112,7 @@ export async function createChart(container) {
         .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
         .attr(
           "y",
-          (d) => y(d.rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
+          (d) => y(d._rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
         )
         .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
         .attr("fill", (d) => color(d.nameOfFigure))
@@ -119,11 +121,7 @@ export async function createChart(container) {
         .style("text-anchor", "middle")
         .text((d) => symbols(d.nameOfFigure));
     }
-    function drawTable() {
-      const tableData = makeTable(datasetLong, minD);
-      const patients = tableData.objects();
-      const fields = tableData.columnNames();
-
+    function drawTable(tableData, patients, fields) {
       const columnWidths = fields.map((field) => {
         const maxLength = tableData
           .derive({
@@ -149,6 +147,7 @@ export async function createChart(container) {
                 .slice(0, fieldIndex)
                 .reduce((sum, width) => sum + width, 0)
           )
+          //rownuber instead of i
           .attr("y", (d, i) => y(i + 1) + y.bandwidth() / 2)
           .text((d) => d[field]);
       });
@@ -278,7 +277,7 @@ export async function createChart(container) {
     drawEvents(parsedDatasetLong);
     drawLegend();
 
-    drawTable();
+    drawTable(tableData, patients, fields);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
