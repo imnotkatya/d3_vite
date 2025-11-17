@@ -33,12 +33,12 @@ export async function createChart(container) {
   `;
   document.head.appendChild(style);
 
-  const width = 1200;
+  const width = 1650;
   const height = 1000;
   const marginTop = 230;
   const marginRight = 250;
   const marginBottom = 100;
-  const marginLeft = 300;
+  const marginLeft = 650;
 
   try {
     const stylesTable = await aq.loadCSV("/src/data/styles_labels_line.csv");
@@ -64,9 +64,9 @@ export async function createChart(container) {
     const datasetLong = parseDate(datasetLongLoad, minD);
     const parsedDatasetLong = convertWideToLong(datasetLong);
     const sortedData = sort(parsedDatasetLong);
-    const tableData = TableData(datasetLong, minD);
+
     const uniqueNames = sortedData.groupby("rowNumber").array("rowNumber");
-    console.log(tableData.objects());
+
     function drawLines(lineRectangles) {
       return svg
         .selectAll(".line")
@@ -119,7 +119,24 @@ export async function createChart(container) {
         .style("text-anchor", "middle")
         .text((d) => symbols(d.nameOfFigure));
     }
+    function drawTable() {
+      const tableData = TableData(datasetLong, minD);
+      const patients = tableData.objects();
+      const fields = tableData.columnNames();
 
+      fields.forEach((field, fieldIndex) => {
+        svg
+          .selectAll(`.patient-${field}`)
+          .data(patients)
+          .enter()
+          .append("text")
+          .attr("x", marginLeft - 550 + fieldIndex * 180)
+          .attr("y", (d, i) => {
+            return y(i + 1) + y.bandwidth() / 2;
+          })
+          .text((d) => d[field]);
+      });
+    }
     function drawLegend() {
       const legendStartY = marginTop + 50;
       const legendItemHeight = 25;
@@ -244,6 +261,8 @@ export async function createChart(container) {
     drawRects(otherRectangles);
     drawEvents(parsedDatasetLong);
     drawLegend();
+
+    drawTable();
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
