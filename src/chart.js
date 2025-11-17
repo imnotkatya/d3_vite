@@ -133,6 +133,7 @@ export async function createChart(container) {
       });
 
       fields.forEach((field, fieldIndex) => {
+        if (fieldIndex === fields.length - 1) return;
         svg
           .selectAll(`table_rows`)
           .data(patients)
