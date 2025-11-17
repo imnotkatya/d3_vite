@@ -146,7 +146,7 @@ export async function createChart(container) {
                 .slice(0, fieldIndex)
                 .reduce((sum, width) => sum + width, 0)
           )
-          .attr("y", (d) => y(d._rowNumber + 1) + y.bandwidth() / 2)
+          .attr("y", (d) => y(d._rowNumber) + y.bandwidth() / 2)
           .attr("text-anchor", "middle")
           .text((d) => d[field]);
       });
