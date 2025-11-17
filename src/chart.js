@@ -3,7 +3,7 @@ import convertWideToLong from "./convertWideToLong";
 import parseDate from "./parseDate";
 import sort from "./sort";
 import * as aq from "arquero";
-import TableData from "./TableData";
+import makeTable from "./makeTable";
 
 function createScale(colors, property) {
   return d3
@@ -120,9 +120,20 @@ export async function createChart(container) {
         .text((d) => symbols(d.nameOfFigure));
     }
     function drawTable() {
-      const tableData = TableData(datasetLong, minD);
+      const tableData = makeTable(datasetLong, minD);
       const patients = tableData.objects();
       const fields = tableData.columnNames();
+
+      const columnWidths = fields.map((field) => {
+        const maxLength = tableData
+          .derive({
+            field_length: aq.escape((d) => String(d[field]).length),
+          })
+          .rollup({ max_length: aq.op.max("field_length") })
+          .object().max_length;
+
+        return maxLength * 8 + 20;
+      });
 
       fields.forEach((field, fieldIndex) => {
         svg
@@ -130,10 +141,15 @@ export async function createChart(container) {
           .data(patients)
           .enter()
           .append("text")
-          .attr("x", marginLeft - 550 + fieldIndex * 180)
-          .attr("y", (d, i) => {
-            return y(i + 1) + y.bandwidth() / 2;
-          })
+          .attr(
+            "x",
+            marginLeft -
+              550 +
+              columnWidths
+                .slice(0, fieldIndex)
+                .reduce((sum, width) => sum + width, 0)
+          )
+          .attr("y", (d, i) => y(i + 1) + y.bandwidth() / 2)
           .text((d) => d[field]);
       });
     }
