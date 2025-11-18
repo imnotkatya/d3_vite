@@ -3,6 +3,7 @@ import convertWideToLong from "./convertWideToLong";
 import parseDate from "./parseDate";
 import sort from "./sort";
 import * as aq from "arquero";
+import makeTable from "./makeTable";
 
 function createScale(colors, property) {
   return d3
@@ -10,6 +11,11 @@ function createScale(colors, property) {
     .domain(colors.map((c) => c.key))
     .range(colors.map((c) => c[property]));
 }
+function getMeasureValue(measures, key, defaultValue = 0) {
+  const measure = measures.find((m) => m.measure === key);
+  return measure ? +measure.value : defaultValue;
+}
+
 function getDomainX(parsedDatasetLong) {
   const times = parsedDatasetLong.rectangles
     .fold(["start", "end"], { as: ["type", "time"] })
@@ -32,13 +38,6 @@ export async function createChart(container) {
   `;
   document.head.appendChild(style);
 
-  const width = 1200;
-  const height = 1000;
-  const marginTop = 230;
-  const marginRight = 250;
-  const marginBottom = 100;
-  const marginLeft = 300;
-
   try {
     const stylesTable = await aq.loadCSV("/src/data/styles_labels_line.csv");
     const stylesData = stylesTable.objects();
@@ -57,13 +56,30 @@ export async function createChart(container) {
       strokeWidth: +d["stroke-width"],
     }));
 
-    const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
+    const measureTable = await aq.loadCSV("/src/data/measure.csv");
+    const measureData = measureTable.objects();
 
+    const measures = measureData.map((d) => ({
+      measure: d.measure,
+      value: d.value,
+    }));
+
+    const width = getMeasureValue(measures, "width");
+    const height = getMeasureValue(measures, "height");
+    const marginTop = getMeasureValue(measures, "marginTop");
+    const marginRight = getMeasureValue(measures, "marginRight");
+    const marginBottom = getMeasureValue(measures, "marginBottom");
+    const marginLeft = getMeasureValue(measures, "marginLeft");
+
+    const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
     const minD = stylesData[0].key;
     const datasetLong = parseDate(datasetLongLoad, minD);
     const parsedDatasetLong = convertWideToLong(datasetLong);
     const sortedData = sort(parsedDatasetLong);
-    const uniqueNames = sortedData.groupby("name").array("name");
+    const tableData = makeTable(datasetLong, minD);
+    const patients = tableData.objects();
+    const fields = tableData.columnNames();
+    const uniqueNames = sortedData.groupby("_rowNumber").array("_rowNumber");
 
     function drawLines(lineRectangles) {
       return svg
@@ -74,8 +90,8 @@ export async function createChart(container) {
         .attr("class", "line")
         .attr("x1", (d) => x(d.start))
         .attr("x2", (d) => x(d.end))
-        .attr("y1", (d) => y(d.name) + y.bandwidth() / 2)
-        .attr("y2", (d) => y(d.name) + y.bandwidth() / 2)
+        .attr("y1", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+        .attr("y2", (d) => y(d._rowNumber) + y.bandwidth() / 2)
         .attr("stroke", (d) => strokeColor(d.nameOfFigure))
         .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
         .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
@@ -93,7 +109,7 @@ export async function createChart(container) {
         .attr("stroke", (d) => strokeColor(d.nameOfFigure))
         .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
         .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
-        .attr("y", (d) => y(d.name) + yModified(d.nameOfFigure))
+        .attr("y", (d) => y(d._rowNumber) + yModified(d.nameOfFigure))
         .attr("x", (d) => x(d.start))
         .attr("height", y.bandwidth())
         .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
@@ -108,7 +124,7 @@ export async function createChart(container) {
         .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
         .attr(
           "y",
-          (d) => y(d.name) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
+          (d) => y(d._rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
         )
         .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
         .attr("fill", (d) => color(d.nameOfFigure))
@@ -117,7 +133,38 @@ export async function createChart(container) {
         .style("text-anchor", "middle")
         .text((d) => symbols(d.nameOfFigure));
     }
+    function drawTable(tableData, patients, fields) {
+      const columnWidths = fields.map((field) => {
+        const maxLength = tableData
+          .derive({
+            field_length: aq.escape((d) => String(d[field]).length),
+          })
+          .rollup({ max_length: aq.op.max("field_length") })
+          .object().max_length;
 
+        return maxLength + 180;
+      });
+
+      fields.forEach((field, fieldIndex) => {
+        if (fieldIndex === fields.length - 1) return;
+        svg
+          .selectAll(`table_rows`)
+          .data(patients)
+          .enter()
+          .append("text")
+          .attr(
+            "x",
+            marginLeft -
+              550 +
+              columnWidths
+                .slice(0, fieldIndex)
+                .reduce((sum, width) => sum + width, 0)
+          )
+          .attr("y", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+          .attr("text-anchor", "middle")
+          .text((d) => d[field]);
+      });
+    }
     function drawLegend() {
       const legendStartY = marginTop + 50;
       const legendItemHeight = 25;
@@ -202,21 +249,6 @@ export async function createChart(container) {
       .paddingInner(0.5)
       .range([height - marginBottom, marginTop]);
 
-    svg
-      .selectAll(".patient-ro")
-      .data(uniqueNames)
-      .enter()
-      .append("text")
-      .attr("x", marginLeft - 70)
-      .attr("y", (d) => y(d) + y.bandwidth() / 2)
-      .attr("dy", "4px")
-      .text((d) => {
-        const patient = sortedData.objects().find((p) => p.name === d);
-        return patient.ro;
-      })
-      .style("font-size", "12px")
-      .style("text-anchor", "end");
-
     const x = d3
       .scaleLinear()
       .domain(getDomainX(parsedDatasetLong))
@@ -241,7 +273,7 @@ export async function createChart(container) {
     svg
       .append("g")
       .attr("transform", `translate(${marginLeft},0)`)
-      .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y).tickFormat(""));
 
     const rectanglesArray = parsedDatasetLong.rectangles.objects();
 
@@ -257,6 +289,8 @@ export async function createChart(container) {
     drawRects(otherRectangles);
     drawEvents(parsedDatasetLong);
     drawLegend();
+
+    drawTable(tableData, patients, fields);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;

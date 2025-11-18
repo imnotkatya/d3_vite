@@ -3,7 +3,12 @@ import * as aq from "arquero";
 export default function (dataset) {
   const rectangles = aq
     .from(dataset)
-    .select("name", aq.endswith("___start"), aq.endswith("___end"))
+    .select(
+      "name",
+      aq.endswith("___start"),
+      aq.endswith("___end"),
+      "_rowNumber"
+    )
 
     .fold(aq.endswith("___start"), { as: ["start_key", "start"] })
     .fold(aq.endswith("___end"), { as: ["end_key", "end"] })
