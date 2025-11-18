@@ -11,6 +11,11 @@ function createScale(colors, property) {
     .domain(colors.map((c) => c.key))
     .range(colors.map((c) => c[property]));
 }
+function getMeasureValue(measures, key, defaultValue = 0) {
+  const measure = measures.find((m) => m.measure === key);
+  return measure ? +measure.value : defaultValue;
+}
+
 function getDomainX(parsedDatasetLong) {
   const times = parsedDatasetLong.rectangles
     .fold(["start", "end"], { as: ["type", "time"] })
@@ -33,13 +38,6 @@ export async function createChart(container) {
   `;
   document.head.appendChild(style);
 
-  const width = 1700;
-  const height = 1000;
-  const marginTop = 230;
-  const marginRight = 250;
-  const marginBottom = 100;
-  const marginLeft = 650;
-
   try {
     const stylesTable = await aq.loadCSV("/src/data/styles_labels_line.csv");
     const stylesData = stylesTable.objects();
@@ -57,6 +55,21 @@ export async function createChart(container) {
       symbolSize: +d.symbol_size,
       strokeWidth: +d["stroke-width"],
     }));
+
+    const measureTable = await aq.loadCSV("/src/data/measure.csv");
+    const measureData = measureTable.objects();
+
+    const measures = measureData.map((d) => ({
+      measure: d.measure,
+      value: d.value,
+    }));
+
+    const width = getMeasureValue(measures, "width");
+    const height = getMeasureValue(measures, "height");
+    const marginTop = getMeasureValue(measures, "marginTop");
+    const marginRight = getMeasureValue(measures, "marginRight");
+    const marginBottom = getMeasureValue(measures, "marginBottom");
+    const marginLeft = getMeasureValue(measures, "marginLeft");
 
     const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
     const minD = stylesData[0].key;
