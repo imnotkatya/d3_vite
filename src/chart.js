@@ -305,9 +305,7 @@ export async function createChart(container) {
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y).tickFormat(""));
 
-    const rectanglesArray = parsedDatasetLong.rectangles
-      ? parsedDatasetLong.rectangles.objects()
-      : [];
+    const rectanglesArray = parsedDatasetLong.rectangles.objects();
 
     const lineRectangles = rectanglesArray.filter(
       (d) => typeFigure(d.nameOfFigure) === "line"
