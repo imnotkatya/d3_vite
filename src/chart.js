@@ -4,6 +4,32 @@ import parseDate from "./parseDate";
 import sort from "./sort";
 import * as aq from "arquero";
 import makeTable from "./makeTable";
+import * as XLSX from "xlsx";
+
+async function loadExcelData() {
+  const response = await fetch("/src/data/infoo.xlsx");
+  const arrayBuffer = await response.arrayBuffer();
+  const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
+  const stylesData = XLSX.utils.sheet_to_json(
+    workbook.Sheets["styles_labels_line"],
+    { defval: "" }
+  );
+
+  const measureData = XLSX.utils.sheet_to_json(workbook.Sheets["measure"], {
+    defval: "",
+  });
+
+  const deathFuData = XLSX.utils.sheet_to_json(workbook.Sheets["death_fu"], {
+    defval: "",
+  });
+
+  return {
+    stylesTable: aq.from(stylesData),
+    measureTable: aq.from(measureData),
+    datasetLongLoad: aq.from(deathFuData),
+  };
+}
 
 function createScale(colors, property) {
   return d3
@@ -11,6 +37,7 @@ function createScale(colors, property) {
     .domain(colors.map((c) => c.key))
     .range(colors.map((c) => c[property]));
 }
+
 function getMeasureValue(measures, key, defaultValue = 0) {
   const measure = measures.find((m) => m.measure === key);
   return measure ? +measure.value : defaultValue;
@@ -24,6 +51,7 @@ function getDomainX(parsedDatasetLong) {
     .array("time");
   return d3.extent(times);
 }
+
 export async function createChart(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -39,7 +67,8 @@ export async function createChart(container) {
   document.head.appendChild(style);
 
   try {
-    const stylesTable = await aq.loadCSV("/src/data/styles_labels_line.csv");
+    const { stylesTable, measureTable, datasetLongLoad } =
+      await loadExcelData();
     const stylesData = stylesTable.objects();
 
     const colors = stylesData.map((d) => ({
@@ -56,25 +85,25 @@ export async function createChart(container) {
       strokeWidth: +d["stroke-width"],
     }));
 
-    const measureTable = await aq.loadCSV("/src/data/measure.csv");
     const measureData = measureTable.objects();
-
     const measures = measureData.map((d) => ({
       measure: d.measure,
-      value: d.value,
+      value: +d.value,
     }));
 
-    const width = getMeasureValue(measures, "width");
-    const height = getMeasureValue(measures, "height");
+    const width = getMeasureValue(measures, "width", 1600);
+    const height = getMeasureValue(measures, "height", 900);
     const marginTop = getMeasureValue(measures, "marginTop");
     const marginRight = getMeasureValue(measures, "marginRight");
     const marginBottom = getMeasureValue(measures, "marginBottom");
     const marginLeft = getMeasureValue(measures, "marginLeft");
 
-    const datasetLongLoad = await aq.loadCSV("/src/data/death_fu.csv");
     const minD = stylesData[0].key;
+
     const datasetLong = parseDate(datasetLongLoad, minD);
+
     const parsedDatasetLong = convertWideToLong(datasetLong);
+
     const sortedData = sort(parsedDatasetLong);
     const tableData = makeTable(datasetLong, minD);
     const patients = tableData.objects();
@@ -133,6 +162,7 @@ export async function createChart(container) {
         .style("text-anchor", "middle")
         .text((d) => symbols(d.nameOfFigure));
     }
+
     function drawTable(tableData, patients, fields) {
       const columnWidths = fields.map((field) => {
         const maxLength = tableData
@@ -165,6 +195,7 @@ export async function createChart(container) {
           .text((d) => d[field]);
       });
     }
+
     function drawLegend() {
       const legendStartY = marginTop + 50;
       const legendItemHeight = 25;
@@ -234,7 +265,6 @@ export async function createChart(container) {
         .style("font-size", "12px")
         .text((d) => d.label);
     }
-
     container.innerHTML = "";
 
     const svg = d3
@@ -275,7 +305,9 @@ export async function createChart(container) {
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y).tickFormat(""));
 
-    const rectanglesArray = parsedDatasetLong.rectangles.objects();
+    const rectanglesArray = parsedDatasetLong.rectangles
+      ? parsedDatasetLong.rectangles.objects()
+      : [];
 
     const lineRectangles = rectanglesArray.filter(
       (d) => typeFigure(d.nameOfFigure) === "line"
@@ -284,12 +316,10 @@ export async function createChart(container) {
     const otherRectangles = rectanglesArray.filter(
       (d) => typeFigure(d.nameOfFigure) !== "line"
     );
-
     drawLines(lineRectangles);
     drawRects(otherRectangles);
     drawEvents(parsedDatasetLong);
     drawLegend();
-
     drawTable(tableData, patients, fields);
   } catch (error) {
     console.error("Error creating chart:", error);

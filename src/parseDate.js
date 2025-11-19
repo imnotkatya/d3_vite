@@ -28,7 +28,6 @@ export default function (dataset, minD) {
             aq.escape(
               (d) =>
                 (aq.op.parse_date(d[col]) - aq.op.parse_date(d.minDate)) /
-                (1000 * 60 * 60 * 24) /
                 365.25
             ),
           ])
