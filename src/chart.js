@@ -6,31 +6,12 @@ import * as aq from "arquero";
 import makeTable from "./makeTable";
 import * as XLSX from "xlsx";
 
-async function loadExcelData() {
-  const response = await fetch("/src/data/infoo.xlsx");
-  const arrayBuffer = await response.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: "array" });
-
-  const stylesData = XLSX.utils.sheet_to_json(
-    workbook.Sheets["styles_labels_line"],
-    { defval: "" }
-  );
-
-  const measureData = XLSX.utils.sheet_to_json(workbook.Sheets["measure"], {
+function loadExcel(workbook, sheetName) {
+  const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
     defval: "",
   });
-
-  const deathFuData = XLSX.utils.sheet_to_json(workbook.Sheets["death_fu"], {
-    defval: "",
-  });
-
-  return {
-    stylesTable: aq.from(stylesData),
-    measureTable: aq.from(measureData),
-    datasetLongLoad: aq.from(deathFuData),
-  };
+  return aq.from(sheetData);
 }
-
 function createScale(colors, property) {
   return d3
     .scaleOrdinal()
@@ -67,8 +48,12 @@ export async function createChart(container) {
   document.head.appendChild(style);
 
   try {
-    const { stylesTable, measureTable, datasetLongLoad } =
-      await loadExcelData();
+    const response = await fetch("/src/data/infoo.xlsx");
+    const arrayBuffer = await response.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const stylesTable = loadExcel(workbook, "styles_labels_line");
+    const measureTable = loadExcel(workbook, "measure");
+    const datasetLongLoad = loadExcel(workbook, "death_fu");
     const stylesData = stylesTable.objects();
 
     const colors = stylesData.map((d) => ({
