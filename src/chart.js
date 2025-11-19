@@ -53,7 +53,8 @@ function getDomainX(parsedDatasetLong) {
 export async function createChart(container) {
   const style = document.createElement("style");
   style.textContent = `
-    @font-face {
+    @font-face 
+    {
       font-family: 'SymbolsNerdFontMono-Regular';
       src: 
            url('/src/fonts/SymbolsNerdFontMono-Regular.ttf') format('truetype');
@@ -61,10 +62,17 @@ export async function createChart(container) {
       font-style: normal;
       font-display: block;
     }
+    .excelUpload 
+    {
+      text-align: center;
+ 
+    }
+    
   `;
   document.head.appendChild(style);
   container.innerHTML = `
     <div class="excelUpload">
+
       <input type="file" id="excelFile" accept=".xlsx, .xls" />
       <div id="chartContent"></div>
     </div>
