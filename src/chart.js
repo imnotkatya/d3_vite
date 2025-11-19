@@ -20,8 +20,7 @@ function createScale(colors, property) {
 }
 
 function getMeasureValue(measures, key, defaultValue = 0) {
-  const measure = measures.find((m) => m.measure === key);
-  return measure ? +measure.value : defaultValue;
+  return +(measures[key] || defaultValue);
 }
 
 function getDomainX(parsedDatasetLong) {
@@ -69,12 +68,11 @@ export async function createChart(container) {
       symbolSize: +d.symbol_size,
       strokeWidth: +d["stroke-width"],
     }));
-
     const measureData = measureTable.objects();
-    const measures = measureData.map((d) => ({
-      measure: d.measure,
-      value: +d.value,
-    }));
+    const measures = {};
+    measureData.forEach((d) => {
+      measures[d.measure] = +d.value;
+    });
 
     const width = getMeasureValue(measures, "width", 1600);
     const height = getMeasureValue(measures, "height", 900);
