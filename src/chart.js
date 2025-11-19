@@ -6,29 +6,27 @@ import * as aq from "arquero";
 import makeTable from "./makeTable";
 import * as XLSX from "xlsx";
 
-async function loadExcelData() {
-  const response = await fetch("/src/data/infoo.xlsx");
-  const arrayBuffer = await response.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: "array" });
+function handleExcelUpload(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-  const stylesData = XLSX.utils.sheet_to_json(
-    workbook.Sheets["styles_labels_line"],
-    { defval: "" }
-  );
+    reader.onload = (e) => {
+      const workbook = XLSX.read(e.target.result, { type: "array" });
+      const toTable = (sheet) =>
+        aq.from(
+          XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { defval: "" })
+        );
 
-  const measureData = XLSX.utils.sheet_to_json(workbook.Sheets["measure"], {
-    defval: "",
+      resolve({
+        stylesTable: toTable("styles_labels_line"),
+        measureTable: toTable("measure"),
+        datasetLongLoad: toTable("death_fu"),
+      });
+    };
+
+    reader.onerror = () => reject(new Error("error"));
+    reader.readAsArrayBuffer(file);
   });
-
-  const deathFuData = XLSX.utils.sheet_to_json(workbook.Sheets["death_fu"], {
-    defval: "",
-  });
-
-  return {
-    stylesTable: aq.from(stylesData),
-    measureTable: aq.from(measureData),
-    datasetLongLoad: aq.from(deathFuData),
-  };
 }
 
 function createScale(colors, property) {
@@ -65,266 +63,279 @@ export async function createChart(container) {
     }
   `;
   document.head.appendChild(style);
+  container.innerHTML = `
+    <div class="excelUpload">
+      <input type="file" id="excelFile" accept=".xlsx, .xls" />
+      <div id="chartContent"></div>
+    </div>
+  `;
 
-  try {
-    const { stylesTable, measureTable, datasetLongLoad } =
-      await loadExcelData();
-    const stylesData = stylesTable.objects();
+  const fileInput = container.querySelector("#excelFile");
+  const chartContent = container.querySelector("#chartContent");
 
-    const colors = stylesData.map((d) => ({
-      key: d.key,
-      type: d.type,
-      color: d.color,
-      label: d.label,
-      strokeDash: +d.stroke_dash,
-      yModify: +d.y_modify,
-      xModify: +d.x_modify,
-      stroke: d.stroke,
-      symbol: d.symbol,
-      symbolSize: +d.symbol_size,
-      strokeWidth: +d["stroke-width"],
-    }));
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    const measureData = measureTable.objects();
-    const measures = measureData.map((d) => ({
-      measure: d.measure,
-      value: +d.value,
-    }));
+    try {
+      const excelData = await handleExcelUpload(file);
+      const { stylesTable, measureTable, datasetLongLoad } = excelData;
+      const stylesData = stylesTable.objects();
 
-    const width = getMeasureValue(measures, "width", 1600);
-    const height = getMeasureValue(measures, "height", 900);
-    const marginTop = getMeasureValue(measures, "marginTop");
-    const marginRight = getMeasureValue(measures, "marginRight");
-    const marginBottom = getMeasureValue(measures, "marginBottom");
-    const marginLeft = getMeasureValue(measures, "marginLeft");
+      const colors = stylesData.map((d) => ({
+        key: d.key,
+        type: d.type,
+        color: d.color,
+        label: d.label,
+        strokeDash: +d.stroke_dash,
+        yModify: +d.y_modify,
+        xModify: +d.x_modify,
+        stroke: d.stroke,
+        symbol: d.symbol,
+        symbolSize: +d.symbol_size,
+        strokeWidth: +d["stroke-width"],
+      }));
 
-    const minD = stylesData[0].key;
+      const measureData = measureTable.objects();
+      const measures = measureData.map((d) => ({
+        measure: d.measure,
+        value: +d.value,
+      }));
 
-    const datasetLong = parseDate(datasetLongLoad, minD);
+      const width = getMeasureValue(measures, "width", 1600);
+      const height = getMeasureValue(measures, "height", 900);
+      const marginTop = getMeasureValue(measures, "marginTop");
+      const marginRight = getMeasureValue(measures, "marginRight");
+      const marginBottom = getMeasureValue(measures, "marginBottom");
+      const marginLeft = getMeasureValue(measures, "marginLeft");
 
-    const parsedDatasetLong = convertWideToLong(datasetLong);
+      const minD = stylesData[0].key;
 
-    const sortedData = sort(parsedDatasetLong);
-    const tableData = makeTable(datasetLong, minD);
-    const patients = tableData.objects();
-    const fields = tableData.columnNames();
-    const uniqueNames = sortedData.groupby("_rowNumber").array("_rowNumber");
+      const datasetLong = parseDate(datasetLongLoad, minD);
+      const parsedDatasetLong = convertWideToLong(datasetLong);
+      const sortedData = sort(parsedDatasetLong);
+      const tableData = makeTable(datasetLong, minD);
+      const patients = tableData.objects();
+      const fields = tableData.columnNames();
+      const uniqueNames = sortedData.groupby("_rowNumber").array("_rowNumber");
 
-    container.innerHTML = "";
+      chartContent.innerHTML = "";
 
-    const svg = d3
-      .select(container)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height);
+      const svg = d3
+        .select(chartContent)
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
 
-    const y = d3
-      .scaleBand()
-      .domain(uniqueNames)
-      .paddingInner(0.5)
-      .range([height - marginBottom, marginTop]);
+      const y = d3
+        .scaleBand()
+        .domain(uniqueNames)
+        .paddingInner(0.5)
+        .range([height - marginBottom, marginTop]);
 
-    const x = d3
-      .scaleLinear()
-      .domain(getDomainX(parsedDatasetLong))
-      .nice()
-      .range([marginLeft, width - marginRight]);
+      const x = d3
+        .scaleLinear()
+        .domain(getDomainX(parsedDatasetLong))
+        .nice()
+        .range([marginLeft, width - marginRight]);
 
-    const color = createScale(colors, "color");
-    const strokeColor = createScale(colors, "stroke");
-    const strokeDash = createScale(colors, "strokeDash");
-    const strokeWidth = createScale(colors, "strokeWidth");
-    const yModified = createScale(colors, "yModify");
-    const xModified = createScale(colors, "xModify");
-    const symbolSize = createScale(colors, "symbolSize");
-    const symbols = createScale(colors, "symbol");
-    const typeFigure = createScale(colors, "type");
+      const color = createScale(colors, "color");
+      const strokeColor = createScale(colors, "stroke");
+      const strokeDash = createScale(colors, "strokeDash");
+      const strokeWidth = createScale(colors, "strokeWidth");
+      const yModified = createScale(colors, "yModify");
+      const xModified = createScale(colors, "xModify");
+      const symbolSize = createScale(colors, "symbolSize");
+      const symbols = createScale(colors, "symbol");
+      const typeFigure = createScale(colors, "type");
 
-    svg
-      .append("g")
-      .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(x));
+      svg
+        .append("g")
+        .attr("transform", `translate(0,${height - marginBottom})`)
+        .call(d3.axisBottom(x));
 
-    svg
-      .append("g")
-      .attr("transform", `translate(${marginLeft},0)`)
-      .call(d3.axisLeft(y).tickFormat(""));
+      svg
+        .append("g")
+        .attr("transform", `translate(${marginLeft},0)`)
+        .call(d3.axisLeft(y).tickFormat(""));
 
-    const rectanglesArray = parsedDatasetLong.rectangles
-      ? parsedDatasetLong.rectangles.objects()
-      : [];
+      const rectanglesArray = parsedDatasetLong.rectangles
+        ? parsedDatasetLong.rectangles.objects()
+        : [];
 
-    const lineRectangles = rectanglesArray.filter(
-      (d) => typeFigure(d.nameOfFigure) === "line"
-    );
+      const lineRectangles = rectanglesArray.filter(
+        (d) => typeFigure(d.nameOfFigure) === "line"
+      );
 
-    const otherRectangles = rectanglesArray.filter(
-      (d) => typeFigure(d.nameOfFigure) !== "line"
-    );
+      const otherRectangles = rectanglesArray.filter(
+        (d) => typeFigure(d.nameOfFigure) !== "line"
+      );
 
-    function drawLines(lineRectangles) {
-      return svg
-        .selectAll(".line")
-        .data(lineRectangles)
-        .enter()
-        .append("line")
-        .attr("class", "line")
-        .attr("x1", (d) => x(d.start))
-        .attr("x2", (d) => x(d.end))
-        .attr("y1", (d) => y(d._rowNumber) + y.bandwidth() / 2)
-        .attr("y2", (d) => y(d._rowNumber) + y.bandwidth() / 2)
-        .attr("stroke", (d) => strokeColor(d.nameOfFigure))
-        .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
-        .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
-        .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
-    }
+      function drawLines(lineRectangles) {
+        return svg
+          .selectAll(".line")
+          .data(lineRectangles)
+          .enter()
+          .append("line")
+          .attr("class", "line")
+          .attr("x1", (d) => x(d.start))
+          .attr("x2", (d) => x(d.end))
+          .attr("y1", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+          .attr("y2", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+          .attr("stroke", (d) => strokeColor(d.nameOfFigure))
+          .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
+          .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
+          .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
+      }
 
-    function drawRects(otherRectangles) {
-      return svg
-        .selectAll(".rects")
-        .data(otherRectangles)
-        .enter()
-        .append("rect")
-        .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
-        .attr("fill", (d) => color(d.nameOfFigure))
-        .attr("stroke", (d) => strokeColor(d.nameOfFigure))
-        .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
-        .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
-        .attr("y", (d) => y(d._rowNumber) + yModified(d.nameOfFigure))
-        .attr("x", (d) => x(d.start))
-        .attr("height", y.bandwidth())
-        .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
-    }
+      function drawRects(otherRectangles) {
+        return svg
+          .selectAll(".rects")
+          .data(otherRectangles)
+          .enter()
+          .append("rect")
+          .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
+          .attr("fill", (d) => color(d.nameOfFigure))
+          .attr("stroke", (d) => strokeColor(d.nameOfFigure))
+          .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
+          .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
+          .attr("y", (d) => y(d._rowNumber) + yModified(d.nameOfFigure))
+          .attr("x", (d) => x(d.start))
+          .attr("height", y.bandwidth())
+          .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
+      }
 
-    function drawEvents(parsedDatasetLong) {
-      return svg
-        .selectAll(".event")
-        .data(parsedDatasetLong.events)
-        .enter()
-        .append("text")
-        .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
-        .attr(
-          "y",
-          (d) => y(d._rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
-        )
-        .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
-        .attr("fill", (d) => color(d.nameOfFigure))
-        .style("font-size", (d) => symbolSize(d.nameOfFigure))
-        .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
-        .style("text-anchor", "middle")
-        .text((d) => symbols(d.nameOfFigure));
-    }
-
-    function drawTable(tableData, patients, fields) {
-      const columnWidths = fields.map((field) => {
-        const maxLength = tableData
-          .derive({
-            field_length: aq.escape((d) => String(d[field]).length),
-          })
-          .rollup({ max_length: aq.op.max("field_length") })
-          .object().max_length;
-
-        return maxLength + 180;
-      });
-
-      fields.forEach((field, fieldIndex) => {
-        if (fieldIndex === fields.length - 1) return;
-        svg
-          .selectAll(`table_rows`)
-          .data(patients)
+      function drawEvents(parsedDatasetLong) {
+        return svg
+          .selectAll(".event")
+          .data(parsedDatasetLong.events)
           .enter()
           .append("text")
+          .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
           .attr(
-            "x",
-            marginLeft -
-              550 +
-              columnWidths
-                .slice(0, fieldIndex)
-                .reduce((sum, width) => sum + width, 0)
+            "y",
+            (d) =>
+              y(d._rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
           )
-          .attr("y", (d) => y(d._rowNumber) + y.bandwidth() / 2)
-          .attr("text-anchor", "middle")
-          .text((d) => d[field]);
-      });
-    }
+          .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
+          .attr("fill", (d) => color(d.nameOfFigure))
+          .style("font-size", (d) => symbolSize(d.nameOfFigure))
+          .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
+          .style("text-anchor", "middle")
+          .text((d) => symbols(d.nameOfFigure));
+      }
 
-    function drawLegend() {
-      const legendStartY = marginTop + 50;
-      const legendItemHeight = 25;
+      function drawTable(tableData, patients, fields) {
+        const columnWidths = fields.map((field) => {
+          const maxLength = tableData
+            .derive({
+              field_length: aq.escape((d) => String(d[field]).length),
+            })
+            .rollup({ max_length: aq.op.max("field_length") })
+            .object().max_length;
 
-      const legendGroup = svg
-        .append("g")
-        .attr("class", "legend")
-        .attr(
-          "transform",
-          `translate(${width - marginRight + 50}, ${legendStartY})`
-        );
+          return maxLength + 180;
+        });
 
-      const uniqueLabels = aq.from(colors).dedupe("label").objects();
-      uniqueLabels.forEach((colorObj, i) => {
-        const key = colorObj.key;
-        const symbol = symbols(key);
-
-        if (symbol) {
-          legendGroup
+        fields.forEach((field, fieldIndex) => {
+          if (fieldIndex === fields.length - 1) return;
+          svg
+            .selectAll(`table_rows`)
+            .data(patients)
+            .enter()
             .append("text")
-            .attr("x", 0)
-            .attr("y", i * legendItemHeight)
-            .attr("text-anchor", "start")
-            .attr("dy", "0.35em")
-            .style("font-size", symbolSize(key))
-            .text(symbol)
-            .style("fill", color(key))
-            .attr("stroke", strokeColor(key))
-            .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
-            .attr("stroke-width", 0.5);
-          return;
-        }
+            .attr(
+              "x",
+              marginLeft -
+                550 +
+                columnWidths
+                  .slice(0, fieldIndex)
+                  .reduce((sum, width) => sum + width, 0)
+            )
+            .attr("y", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+            .attr("text-anchor", "middle")
+            .text((d) => d[field]);
+        });
+      }
 
-        if (typeFigure(key) === "line") {
+      function drawLegend() {
+        const legendStartY = marginTop + 50;
+        const legendItemHeight = 25;
+
+        const legendGroup = svg
+          .append("g")
+          .attr("class", "legend")
+          .attr(
+            "transform",
+            `translate(${width - marginRight + 50}, ${legendStartY})`
+          );
+
+        const uniqueLabels = aq.from(colors).dedupe("label").objects();
+        uniqueLabels.forEach((colorObj, i) => {
+          const key = colorObj.key;
+          const symbol = symbols(key);
+
+          if (symbol) {
+            legendGroup
+              .append("text")
+              .attr("x", 0)
+              .attr("y", i * legendItemHeight)
+              .attr("text-anchor", "start")
+              .attr("dy", "0.35em")
+              .style("font-size", symbolSize(key))
+              .text(symbol)
+              .style("fill", color(key))
+              .attr("stroke", strokeColor(key))
+              .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
+              .attr("stroke-width", 0.5);
+            return;
+          }
+
+          if (typeFigure(key) === "line") {
+            legendGroup
+              .append("line")
+              .attr("x1", 0)
+              .attr("x2", 20)
+              .attr("y1", i * legendItemHeight)
+              .attr("y2", i * legendItemHeight)
+              .attr("stroke", strokeColor(key))
+              .attr("stroke-width", strokeWidth(key))
+              .attr("stroke-dasharray", strokeDash(key));
+            return;
+          }
+
           legendGroup
-            .append("line")
-            .attr("x1", 0)
-            .attr("x2", 20)
-            .attr("y1", i * legendItemHeight)
-            .attr("y2", i * legendItemHeight)
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", i * legendItemHeight - 10)
+            .attr("width", 20)
+            .attr("height", 15)
             .attr("stroke", strokeColor(key))
+            .attr("stroke-dasharray", strokeDash(key))
             .attr("stroke-width", strokeWidth(key))
-            .attr("stroke-dasharray", strokeDash(key));
-          return;
-        }
+            .style("fill", color(key));
+        });
 
         legendGroup
-          .append("rect")
-          .attr("x", 0)
-          .attr("y", i * legendItemHeight - 10)
-          .attr("width", 20)
-          .attr("height", 15)
-          .attr("stroke", strokeColor(key))
-          .attr("stroke-dasharray", strokeDash(key))
-          .attr("stroke-width", strokeWidth(key))
-          .style("fill", color(key));
-      });
+          .selectAll(".legend-label")
+          .data(uniqueLabels)
+          .enter()
+          .append("text")
+          .attr("x", 30)
+          .attr("y", (d, i) => i * legendItemHeight)
+          .attr("dy", "0.35em")
+          .style("font-size", "12px")
+          .text((d) => d.label);
+      }
 
-      legendGroup
-        .selectAll(".legend-label")
-        .data(uniqueLabels)
-        .enter()
-        .append("text")
-        .attr("x", 30)
-        .attr("y", (d, i) => i * legendItemHeight)
-        .attr("dy", "0.35em")
-        .style("font-size", "12px")
-        .text((d) => d.label);
+      drawLines(lineRectangles);
+      drawRects(otherRectangles);
+      drawEvents(parsedDatasetLong);
+      drawLegend();
+      drawTable(tableData, patients, fields);
+    } catch (error) {
+      console.error("Error creating chart:", error);
+      container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
     }
-
-    drawLines(lineRectangles);
-    drawRects(otherRectangles);
-    drawEvents(parsedDatasetLong);
-    drawLegend();
-    drawTable(tableData, patients, fields);
-  } catch (error) {
-    console.error("Error creating chart:", error);
-    container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
-  }
+  });
 }
