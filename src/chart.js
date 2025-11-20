@@ -98,6 +98,22 @@ function drawChart(parsedDatasetLong, context, typeFigure) {
   drawRects(otherRectangles, context);
   drawEvents(parsedDatasetLong, context);
 }
+const loadData = async (file) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
+  const stylesTable = loadExcel(workbook, "styles_labels_line");
+  const measureTable = loadExcel(workbook, "measure");
+  const datasetLongLoad = loadExcel(workbook, "death_fu");
+  const stylesData = stylesTable.objects();
+  const measureData = measureTable.objects();
+  const measures = {};
+  measureData.forEach((d) => {
+    measures[d.measure] = +d.value;
+  });
+
+  return { stylesData, measures, datasetLongLoad };
+};
 
 export async function createChart(container) {
   const style = document.createElement("style");
@@ -114,15 +130,10 @@ export async function createChart(container) {
   document.head.appendChild(style);
 
   try {
-    const response = await fetch("/src/data/infoo.xlsx");
-    const arrayBuffer = await response.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
-    const stylesTable = loadExcel(workbook, "styles_labels_line");
-    const measureTable = loadExcel(workbook, "measure");
-    const datasetLongLoad = loadExcel(workbook, "death_fu");
-    const stylesData = stylesTable.objects();
+    const file = await fetch("/src/data/infoo.xlsx");
+    const raw = await loadData(file);
 
-    const colors = stylesData.map((d) => ({
+    const colors = raw.stylesData.map((d) => ({
       key: d.key,
       type: d.type,
       color: d.color,
@@ -136,22 +147,16 @@ export async function createChart(container) {
       strokeWidth: +d["stroke-width"],
     }));
 
-    const measureData = measureTable.objects();
-    const measures = {};
-    measureData.forEach((d) => {
-      measures[d.measure] = +d.value;
-    });
+    const width = raw.measures.width || 1600;
+    const height = raw.measures.height || 900;
+    const marginTop = raw.measures.marginTop || 0;
+    const marginRight = raw.measures.marginRight || 0;
+    const marginBottom = raw.measures.marginBottom || 0;
+    const marginLeft = raw.measures.marginLeft || 0;
 
-    const width = measures.width || 1600;
-    const height = measures.height || 900;
-    const marginTop = measures.marginTop || 0;
-    const marginRight = measures.marginRight || 0;
-    const marginBottom = measures.marginBottom || 0;
-    const marginLeft = measures.marginLeft || 0;
+    const minD = raw.stylesData[0].key;
 
-    const minD = stylesData[0].key;
-
-    const datasetLong = parseDate(datasetLongLoad, minD);
+    const datasetLong = parseDate(raw.datasetLongLoad, minD);
 
     const parsedDatasetLong = convertWideToLong(datasetLong);
 
