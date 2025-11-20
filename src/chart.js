@@ -19,11 +19,6 @@ function createScale(colors, property) {
     .range(colors.map((c) => c[property]));
 }
 
-function getMeasureValue(measures, key, defaultValue = 0) {
-  const measure = measures.find((m) => m.measure === key);
-  return measure ? +measure.value : defaultValue;
-}
-
 function getDomainX(parsedDatasetLong) {
   const times = parsedDatasetLong.rectangles
     .fold(["start", "end"], { as: ["type", "time"] })
@@ -69,19 +64,18 @@ export async function createChart(container) {
       symbolSize: +d.symbol_size,
       strokeWidth: +d["stroke-width"],
     }));
-
     const measureData = measureTable.objects();
-    const measures = measureData.map((d) => ({
-      measure: d.measure,
-      value: +d.value,
-    }));
+    const measures = {};
+    measureData.forEach((d) => {
+      measures[d.measure] = +d.value;
+    });
 
-    const width = getMeasureValue(measures, "width", 1600);
-    const height = getMeasureValue(measures, "height", 900);
-    const marginTop = getMeasureValue(measures, "marginTop");
-    const marginRight = getMeasureValue(measures, "marginRight");
-    const marginBottom = getMeasureValue(measures, "marginBottom");
-    const marginLeft = getMeasureValue(measures, "marginLeft");
+    const width = measures.width || 1600;
+    const height = measures.height || 900;
+    const marginTop = measures.marginTop || 0;
+    const marginRight = measures.marginRight || 0;
+    const marginBottom = measures.marginBottom || 0;
+    const marginLeft = measures.marginLeft || 0;
 
     const minD = stylesData[0].key;
 
