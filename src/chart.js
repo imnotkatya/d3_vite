@@ -12,12 +12,14 @@ function loadExcel(workbook, sheetName) {
   });
   return aq.from(sheetData);
 }
+
 function createScale(colors, property) {
   return d3
     .scaleOrdinal()
     .domain(colors.map((c) => c.key))
     .range(colors.map((c) => c[property]));
 }
+
 function getDomainX(parsedDatasetLong) {
   const times = parsedDatasetLong.rectangles
     .fold(["start", "end"], { as: ["type", "time"] })
@@ -26,6 +28,7 @@ function getDomainX(parsedDatasetLong) {
     .array("time");
   return d3.extent(times);
 }
+
 function drawLines(lineRectangles, context) {
   const { svg, x, y, strokeColor, strokeWidth, strokeDash } = context;
   return svg
@@ -62,12 +65,13 @@ function drawRects(otherRectangles, context) {
     .attr("height", y.bandwidth())
     .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
 }
-function drawEvents(parsedDatasetLong, context) {
+
+function drawEvents(events, context) {
   const { svg, color, yModified, x, y, xModified, symbols, symbolSize } =
     context;
   return svg
     .selectAll(".event")
-    .data(parsedDatasetLong.events)
+    .data(events)
     .enter()
     .append("text")
     .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
@@ -83,8 +87,219 @@ function drawEvents(parsedDatasetLong, context) {
     .text((d) => symbols(d.nameOfFigure));
 }
 
-function drawChart(parsedDatasetLong, context, typeFigure) {
+function drawTable(tableData, patients, fields, context) {
+  const { svg, y, marginLeft } = context;
+
+  const columnWidths = fields.map((field) => {
+    const maxLength = tableData
+      .derive({
+        field_length: aq.escape((d) => String(d[field]).length),
+      })
+      .rollup({ max_length: aq.op.max("field_length") })
+      .object().max_length;
+    return maxLength + 180;
+  });
+
+  fields.forEach((field, fieldIndex) => {
+    if (fieldIndex === fields.length - 1) return;
+    svg
+      .selectAll(`table_rows`)
+      .data(patients)
+      .enter()
+      .append("text")
+      .attr(
+        "x",
+        marginLeft -
+          550 +
+          columnWidths
+            .slice(0, fieldIndex)
+            .reduce((sum, width) => sum + width, 0)
+      )
+      .attr("y", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+      .attr("text-anchor", "middle")
+      .text((d) => d[field]);
+  });
+}
+
+function drawLegend(context) {
+  const {
+    svg,
+    strokeColor,
+    strokeWidth,
+    strokeDash,
+    marginTop,
+    marginRight,
+    width,
+    colors,
+    symbols,
+    symbolSize,
+    color,
+    typeFigure,
+  } = context;
+
+  const legendStartY = marginTop + 50;
+  const legendItemHeight = 25;
+
+  const legendGroup = svg
+    .append("g")
+    .attr("class", "legend")
+    .attr(
+      "transform",
+      `translate(${width - marginRight + 50}, ${legendStartY})`
+    );
+
+  const uniqueLabels = aq.from(colors).dedupe("label").objects();
+  uniqueLabels.forEach((colorObj, i) => {
+    const key = colorObj.key;
+    const symbol = symbols(key);
+
+    if (symbol) {
+      legendGroup
+        .append("text")
+        .attr("x", 0)
+        .attr("y", i * legendItemHeight)
+        .attr("text-anchor", "start")
+        .attr("dy", "0.35em")
+        .style("font-size", symbolSize(key))
+        .text(symbol)
+        .style("fill", color(key))
+        .attr("stroke", strokeColor(key))
+        .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
+        .attr("stroke-width", 0.5);
+      return;
+    }
+
+    if (typeFigure(key) === "line") {
+      legendGroup
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", 20)
+        .attr("y1", i * legendItemHeight)
+        .attr("y2", i * legendItemHeight)
+        .attr("stroke", strokeColor(key))
+        .attr("stroke-width", strokeWidth(key))
+        .attr("stroke-dasharray", strokeDash(key));
+      return;
+    }
+
+    legendGroup
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", i * legendItemHeight - 10)
+      .attr("width", 20)
+      .attr("height", 15)
+      .attr("stroke", strokeColor(key))
+      .attr("stroke-dasharray", strokeDash(key))
+      .attr("stroke-width", strokeWidth(key))
+      .style("fill", color(key));
+  });
+
+  legendGroup
+    .selectAll(".legend-label")
+    .data(uniqueLabels)
+    .enter()
+    .append("text")
+    .attr("x", 30)
+    .attr("y", (d, i) => i * legendItemHeight)
+    .attr("dy", "0.35em")
+    .style("font-size", "12px")
+    .text((d) => d.label);
+}
+
+function drawChart(raw, container) {
+  const colors = raw.stylesData.map((d) => ({
+    key: d.key,
+    type: d.type,
+    color: d.color,
+    label: d.label,
+    strokeDash: +d.stroke_dash,
+    yModify: +d.y_modify,
+    xModify: +d.x_modify,
+    stroke: d.stroke,
+    symbol: d.symbol,
+    symbolSize: +d.symbol_size,
+    strokeWidth: +d["stroke-width"],
+  }));
+
+  const width = raw.measures.width || 1600;
+  const height = raw.measures.height || 900;
+  const marginTop = raw.measures.marginTop || 0;
+  const marginRight = raw.measures.marginRight || 0;
+  const marginBottom = raw.measures.marginBottom || 0;
+  const marginLeft = raw.measures.marginLeft || 0;
+
+  const minD = raw.stylesData[0].key;
+
+  const datasetLong = parseDate(raw.datasetLongLoad, minD);
+  const parsedDatasetLong = convertWideToLong(datasetLong);
+  const sortedData = sort(parsedDatasetLong);
+  const tableData = makeTable(datasetLong, minD);
+  const patients = tableData.objects();
+  const fields = tableData.columnNames();
+  const uniqueNames = sortedData.groupby("_rowNumber").array("_rowNumber");
+
+  container.innerHTML = "";
+
+  const svg = d3
+    .select(container)
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  const y = d3
+    .scaleBand()
+    .domain(uniqueNames)
+    .paddingInner(0.5)
+    .range([height - marginBottom, marginTop]);
+
+  const x = d3
+    .scaleLinear()
+    .domain(getDomainX(parsedDatasetLong))
+    .nice()
+    .range([marginLeft, width - marginRight]);
+
+  const color = createScale(colors, "color");
+  const strokeColor = createScale(colors, "stroke");
+  const strokeDash = createScale(colors, "strokeDash");
+  const strokeWidth = createScale(colors, "strokeWidth");
+  const yModified = createScale(colors, "yModify");
+  const xModified = createScale(colors, "xModify");
+  const symbolSize = createScale(colors, "symbolSize");
+  const symbols = createScale(colors, "symbol");
+  const typeFigure = createScale(colors, "type");
+
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height - marginBottom})`)
+    .call(d3.axisBottom(x));
+
+  svg
+    .append("g")
+    .attr("transform", `translate(${marginLeft},0)`)
+    .call(d3.axisLeft(y).tickFormat(""));
+
+  const context = {
+    svg,
+    x,
+    y,
+    strokeColor,
+    strokeWidth,
+    strokeDash,
+    yModified,
+    color,
+    xModified,
+    symbols,
+    symbolSize,
+    marginLeft,
+    marginTop,
+    marginRight,
+    width,
+    colors,
+    typeFigure,
+  };
+
   const rectanglesArray = parsedDatasetLong.rectangles.objects();
+  const events = parsedDatasetLong.events.objects();
 
   const lineRectangles = rectanglesArray.filter(
     (d) => typeFigure(d.nameOfFigure) === "line"
@@ -96,8 +311,11 @@ function drawChart(parsedDatasetLong, context, typeFigure) {
 
   drawLines(lineRectangles, context);
   drawRects(otherRectangles, context);
-  drawEvents(parsedDatasetLong, context);
+  drawEvents(events, context);
+  drawTable(tableData, patients, fields, context);
+  drawLegend(context);
 }
+
 const loadData = async (file) => {
   const arrayBuffer = await file.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
@@ -120,8 +338,7 @@ export async function createChart(container) {
   style.textContent = `
     @font-face {
       font-family: 'SymbolsNerdFontMono-Regular';
-      src: 
-           url('/src/fonts/SymbolsNerdFontMono-Regular.ttf') format('truetype');
+      src: url('/src/fonts/SymbolsNerdFontMono-Regular.ttf') format('truetype');
       font-weight: normal;
       font-style: normal;
       font-display: block;
@@ -132,198 +349,7 @@ export async function createChart(container) {
   try {
     const file = await fetch("/src/data/infoo.xlsx");
     const raw = await loadData(file);
-
-    const colors = raw.stylesData.map((d) => ({
-      key: d.key,
-      type: d.type,
-      color: d.color,
-      label: d.label,
-      strokeDash: +d.stroke_dash,
-      yModify: +d.y_modify,
-      xModify: +d.x_modify,
-      stroke: d.stroke,
-      symbol: d.symbol,
-      symbolSize: +d.symbol_size,
-      strokeWidth: +d["stroke-width"],
-    }));
-
-    const width = raw.measures.width || 1600;
-    const height = raw.measures.height || 900;
-    const marginTop = raw.measures.marginTop || 0;
-    const marginRight = raw.measures.marginRight || 0;
-    const marginBottom = raw.measures.marginBottom || 0;
-    const marginLeft = raw.measures.marginLeft || 0;
-
-    const minD = raw.stylesData[0].key;
-
-    const datasetLong = parseDate(raw.datasetLongLoad, minD);
-
-    const parsedDatasetLong = convertWideToLong(datasetLong);
-
-    const sortedData = sort(parsedDatasetLong);
-    const tableData = makeTable(datasetLong, minD);
-    const patients = tableData.objects();
-    const fields = tableData.columnNames();
-    const uniqueNames = sortedData.groupby("_rowNumber").array("_rowNumber");
-
-    function drawTable(tableData, patients, fields) {
-      const columnWidths = fields.map((field) => {
-        const maxLength = tableData
-          .derive({
-            field_length: aq.escape((d) => String(d[field]).length),
-          })
-          .rollup({ max_length: aq.op.max("field_length") })
-          .object().max_length;
-
-        return maxLength + 180;
-      });
-
-      fields.forEach((field, fieldIndex) => {
-        if (fieldIndex === fields.length - 1) return;
-        svg
-          .selectAll(`table_rows`)
-          .data(patients)
-          .enter()
-          .append("text")
-          .attr(
-            "x",
-            marginLeft -
-              550 +
-              columnWidths
-                .slice(0, fieldIndex)
-                .reduce((sum, width) => sum + width, 0)
-          )
-          .attr("y", (d) => y(d._rowNumber) + y.bandwidth() / 2)
-          .attr("text-anchor", "middle")
-          .text((d) => d[field]);
-      });
-    }
-
-    function drawLegend() {
-      const legendStartY = marginTop + 50;
-      const legendItemHeight = 25;
-
-      const legendGroup = svg
-        .append("g")
-        .attr("class", "legend")
-        .attr(
-          "transform",
-          `translate(${width - marginRight + 50}, ${legendStartY})`
-        );
-
-      const uniqueLabels = aq.from(colors).dedupe("label").objects();
-      uniqueLabels.forEach((colorObj, i) => {
-        const key = colorObj.key;
-        const symbol = symbols(key);
-
-        if (symbol) {
-          legendGroup
-            .append("text")
-            .attr("x", 0)
-            .attr("y", i * legendItemHeight)
-            .attr("text-anchor", "start")
-            .attr("dy", "0.35em")
-            .style("font-size", symbolSize(key))
-            .text(symbol)
-            .style("fill", color(key))
-            .attr("stroke", strokeColor(key))
-            .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
-            .attr("stroke-width", 0.5);
-          return;
-        }
-
-        if (typeFigure(key) === "line") {
-          legendGroup
-            .append("line")
-            .attr("x1", 0)
-            .attr("x2", 20)
-            .attr("y1", i * legendItemHeight)
-            .attr("y2", i * legendItemHeight)
-            .attr("stroke", strokeColor(key))
-            .attr("stroke-width", strokeWidth(key))
-            .attr("stroke-dasharray", strokeDash(key));
-          return;
-        }
-
-        legendGroup
-          .append("rect")
-          .attr("x", 0)
-          .attr("y", i * legendItemHeight - 10)
-          .attr("width", 20)
-          .attr("height", 15)
-          .attr("stroke", strokeColor(key))
-          .attr("stroke-dasharray", strokeDash(key))
-          .attr("stroke-width", strokeWidth(key))
-          .style("fill", color(key));
-      });
-
-      legendGroup
-        .selectAll(".legend-label")
-        .data(uniqueLabels)
-        .enter()
-        .append("text")
-        .attr("x", 30)
-        .attr("y", (d, i) => i * legendItemHeight)
-        .attr("dy", "0.35em")
-        .style("font-size", "12px")
-        .text((d) => d.label);
-    }
-
-    container.innerHTML = "";
-
-    const svg = d3
-      .select(container)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height);
-
-    const y = d3
-      .scaleBand()
-      .domain(uniqueNames)
-      .paddingInner(0.5)
-      .range([height - marginBottom, marginTop]);
-
-    const x = d3
-      .scaleLinear()
-      .domain(getDomainX(parsedDatasetLong))
-      .nice()
-      .range([marginLeft, width - marginRight]);
-
-    const color = createScale(colors, "color");
-    const strokeColor = createScale(colors, "stroke");
-    const strokeDash = createScale(colors, "strokeDash");
-    const strokeWidth = createScale(colors, "strokeWidth");
-    const yModified = createScale(colors, "yModify");
-    const xModified = createScale(colors, "xModify");
-    const symbolSize = createScale(colors, "symbolSize");
-    const symbols = createScale(colors, "symbol");
-    const typeFigure = createScale(colors, "type");
-
-    svg
-      .append("g")
-      .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(x));
-
-    svg
-      .append("g")
-      .attr("transform", `translate(${marginLeft},0)`)
-      .call(d3.axisLeft(y).tickFormat(""));
-    const context = {
-      svg,
-      x,
-      y,
-      strokeColor,
-      strokeWidth,
-      strokeDash,
-      yModified,
-      color,
-      xModified,
-      symbols,
-      symbolSize,
-    };
-    drawChart(parsedDatasetLong, context, typeFigure);
-    drawLegend();
-    drawTable(tableData, patients, fields);
+    drawChart(raw, container);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
