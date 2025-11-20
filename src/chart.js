@@ -204,6 +204,12 @@ function drawLegend(svg, scales, measures_context, colors) {
 }
 
 function processData(raw) {
+  const measures = {};
+
+  raw.measureData.forEach((d) => {
+    measures[d.measure] = +d.value;
+  });
+
   const colors = raw.stylesData.map((d) => ({
     key: d.key,
     type: d.type,
@@ -219,12 +225,12 @@ function processData(raw) {
   }));
 
   const measures_context = {
-    width: raw.measures.width || 1600,
-    height: raw.measures.height || 900,
-    marginTop: raw.measures.marginTop || 0,
-    marginRight: raw.measures.marginRight || 0,
-    marginBottom: raw.measures.marginBottom || 0,
-    marginLeft: raw.measures.marginLeft || 0,
+    width: measures.width || 1600,
+    height: measures.height || 900,
+    marginTop: measures.marginTop || 0,
+    marginRight: measures.marginRight || 0,
+    marginBottom: measures.marginBottom || 0,
+    marginLeft: measures.marginLeft || 0,
   };
 
   const minD = raw.stylesData[0].key;
@@ -337,13 +343,8 @@ const loadData = async (file) => {
   const datasetLongLoad = loadExcel(workbook, "death_fu");
   const stylesData = stylesTable.objects();
   const measureData = measureTable.objects();
-  const measures = {};
 
-  measureData.forEach((d) => {
-    measures[d.measure] = +d.value;
-  });
-
-  return { stylesData, measures, datasetLongLoad };
+  return { stylesData, measureData, datasetLongLoad };
 };
 
 export async function createChart(container) {
