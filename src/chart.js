@@ -347,6 +347,13 @@ const loadData = async (file) => {
   return { stylesData, measureData, datasetLongLoad };
 };
 
+const Plot = async (file, container) => {
+  const data = await fetch(file);
+  const raw = await loadData(data);
+  const processedData = processData(raw);
+  drawChart(processedData, container);
+};
+
 export async function createChart(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -361,11 +368,7 @@ export async function createChart(container) {
   document.head.appendChild(style);
 
   try {
-    const file = await fetch("/src/data/infoo.xlsx");
-    const raw = await loadData(file);
-    const processedData = processData(raw);
-
-    drawChart(processedData, container);
+    Plot("/src/data/infoo.xlsx", container);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
