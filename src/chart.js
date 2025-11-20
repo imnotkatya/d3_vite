@@ -29,8 +29,10 @@ function getDomainX(parsedDatasetLong) {
   return d3.extent(times);
 }
 
-function drawLines(lineRectangles, context) {
-  const { svg, x, y, strokeColor, strokeWidth, strokeDash } = context;
+function drawLines(svg, lineRectangles, context, scales) {
+  const { x, y } = context;
+  const { strokeColor, strokeWidth, strokeDash } = scales;
+
   return svg
     .selectAll(".line")
     .data(lineRectangles)
@@ -47,9 +49,10 @@ function drawLines(lineRectangles, context) {
     .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
 }
 
-function drawRects(otherRectangles, context) {
-  const { svg, strokeDash, color, strokeColor, strokeWidth, yModified, x, y } =
-    context;
+function drawRects(svg, otherRectangles, context, scales) {
+  const { x, y } = context;
+  const { strokeDash, color, strokeColor, strokeWidth, yModified } = scales;
+
   return svg
     .selectAll(".rects")
     .data(otherRectangles)
@@ -66,9 +69,10 @@ function drawRects(otherRectangles, context) {
     .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
 }
 
-function drawEvents(events, context) {
-  const { svg, color, yModified, x, y, xModified, symbols, symbolSize } =
-    context;
+function drawEvents(svg, events, context, scales) {
+  const { x, y } = context;
+  const { color, yModified, xModified, symbols, symbolSize } = scales;
+
   return svg
     .selectAll(".event")
     .data(events)
@@ -87,8 +91,8 @@ function drawEvents(events, context) {
     .text((d) => symbols(d.nameOfFigure));
 }
 
-function drawTable(tableData, patients, fields, context) {
-  const { svg, y, marginLeft } = context;
+function drawTable(svg, tableData, patients, fields, context) {
+  const { y, marginLeft } = context;
 
   const columnWidths = fields.map((field) => {
     const maxLength = tableData
@@ -121,21 +125,17 @@ function drawTable(tableData, patients, fields, context) {
   });
 }
 
-function drawLegend(context) {
+function drawLegend(svg, context, scales) {
+  const { marginTop, marginRight, width, colors } = context;
   const {
-    svg,
-    strokeColor,
-    strokeWidth,
-    strokeDash,
-    marginTop,
-    marginRight,
-    width,
-    colors,
     symbols,
     symbolSize,
     color,
+    strokeColor,
+    strokeWidth,
+    strokeDash,
     typeFigure,
-  } = context;
+  } = scales;
 
   const legendStartY = marginTop + 50;
   const legendItemHeight = 25;
@@ -258,16 +258,6 @@ function drawChart(raw, container) {
     .nice()
     .range([marginLeft, width - marginRight]);
 
-  const color = createScale(colors, "color");
-  const strokeColor = createScale(colors, "stroke");
-  const strokeDash = createScale(colors, "strokeDash");
-  const strokeWidth = createScale(colors, "strokeWidth");
-  const yModified = createScale(colors, "yModify");
-  const xModified = createScale(colors, "xModify");
-  const symbolSize = createScale(colors, "symbolSize");
-  const symbols = createScale(colors, "symbol");
-  const typeFigure = createScale(colors, "type");
-
   svg
     .append("g")
     .attr("transform", `translate(0,${height - marginBottom})`)
@@ -279,41 +269,45 @@ function drawChart(raw, container) {
     .call(d3.axisLeft(y).tickFormat(""));
 
   const context = {
-    svg,
     x,
     y,
-    strokeColor,
-    strokeWidth,
-    strokeDash,
-    yModified,
-    color,
-    xModified,
-    symbols,
-    symbolSize,
     marginLeft,
     marginTop,
     marginRight,
+    marginBottom,
     width,
+    height,
     colors,
-    typeFigure,
+  };
+
+  const scales = {
+    color: createScale(colors, "color"),
+    strokeColor: createScale(colors, "stroke"),
+    strokeDash: createScale(colors, "strokeDash"),
+    strokeWidth: createScale(colors, "strokeWidth"),
+    yModified: createScale(colors, "yModify"),
+    xModified: createScale(colors, "xModify"),
+    symbolSize: createScale(colors, "symbolSize"),
+    symbols: createScale(colors, "symbol"),
+    typeFigure: createScale(colors, "type"),
   };
 
   const rectanglesArray = parsedDatasetLong.rectangles.objects();
   const events = parsedDatasetLong.events.objects();
 
   const lineRectangles = rectanglesArray.filter(
-    (d) => typeFigure(d.nameOfFigure) === "line"
+    (d) => scales.typeFigure(d.nameOfFigure) === "line"
   );
 
   const otherRectangles = rectanglesArray.filter(
-    (d) => typeFigure(d.nameOfFigure) !== "line"
+    (d) => scales.typeFigure(d.nameOfFigure) !== "line"
   );
 
-  drawLines(lineRectangles, context);
-  drawRects(otherRectangles, context);
-  drawEvents(events, context);
-  drawTable(tableData, patients, fields, context);
-  drawLegend(context);
+  drawLines(svg, lineRectangles, context, scales);
+  drawRects(svg, otherRectangles, context, scales);
+  drawEvents(svg, events, context, scales);
+  drawTable(svg, tableData, patients, fields, context, scales);
+  drawLegend(svg, context, scales);
 }
 
 const loadData = async (file) => {
