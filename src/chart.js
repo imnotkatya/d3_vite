@@ -18,7 +18,6 @@ function createScale(colors, property) {
     .domain(colors.map((c) => c.key))
     .range(colors.map((c) => c[property]));
 }
-
 function getDomainX(parsedDatasetLong) {
   const times = parsedDatasetLong.rectangles
     .fold(["start", "end"], { as: ["type", "time"] })
@@ -26,6 +25,78 @@ function getDomainX(parsedDatasetLong) {
     .filter((d) => d.time >= 0)
     .array("time");
   return d3.extent(times);
+}
+function drawLines(lineRectangles, context) {
+  const { svg, x, y, strokeColor, strokeWidth, strokeDash } = context;
+  return svg
+    .selectAll(".line")
+    .data(lineRectangles)
+    .enter()
+    .append("line")
+    .attr("class", "line")
+    .attr("x1", (d) => x(d.start))
+    .attr("x2", (d) => x(d.end))
+    .attr("y1", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+    .attr("y2", (d) => y(d._rowNumber) + y.bandwidth() / 2)
+    .attr("stroke", (d) => strokeColor(d.nameOfFigure))
+    .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
+    .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
+    .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
+}
+
+function drawRects(otherRectangles, context) {
+  const { svg, strokeDash, color, strokeColor, strokeWidth, yModified, x, y } =
+    context;
+  return svg
+    .selectAll(".rects")
+    .data(otherRectangles)
+    .enter()
+    .append("rect")
+    .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
+    .attr("fill", (d) => color(d.nameOfFigure))
+    .attr("stroke", (d) => strokeColor(d.nameOfFigure))
+    .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
+    .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
+    .attr("y", (d) => y(d._rowNumber) + yModified(d.nameOfFigure))
+    .attr("x", (d) => x(d.start))
+    .attr("height", y.bandwidth())
+    .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
+}
+function drawEvents(parsedDatasetLong, context) {
+  const { svg, color, yModified, x, y, xModified, symbols, symbolSize } =
+    context;
+  return svg
+    .selectAll(".event")
+    .data(parsedDatasetLong.events)
+    .enter()
+    .append("text")
+    .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
+    .attr(
+      "y",
+      (d) => y(d._rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
+    )
+    .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
+    .attr("fill", (d) => color(d.nameOfFigure))
+    .style("font-size", (d) => symbolSize(d.nameOfFigure))
+    .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
+    .style("text-anchor", "middle")
+    .text((d) => symbols(d.nameOfFigure));
+}
+
+function drawChart(parsedDatasetLong, context, typeFigure) {
+  const rectanglesArray = parsedDatasetLong.rectangles.objects();
+
+  const lineRectangles = rectanglesArray.filter(
+    (d) => typeFigure(d.nameOfFigure) === "line"
+  );
+
+  const otherRectangles = rectanglesArray.filter(
+    (d) => typeFigure(d.nameOfFigure) !== "line"
+  );
+
+  drawLines(lineRectangles, context);
+  drawRects(otherRectangles, context);
+  drawEvents(parsedDatasetLong, context);
 }
 
 export async function createChart(container) {
@@ -89,59 +160,6 @@ export async function createChart(container) {
     const patients = tableData.objects();
     const fields = tableData.columnNames();
     const uniqueNames = sortedData.groupby("_rowNumber").array("_rowNumber");
-
-    function drawLines(lineRectangles) {
-      return svg
-        .selectAll(".line")
-        .data(lineRectangles)
-        .enter()
-        .append("line")
-        .attr("class", "line")
-        .attr("x1", (d) => x(d.start))
-        .attr("x2", (d) => x(d.end))
-        .attr("y1", (d) => y(d._rowNumber) + y.bandwidth() / 2)
-        .attr("y2", (d) => y(d._rowNumber) + y.bandwidth() / 2)
-        .attr("stroke", (d) => strokeColor(d.nameOfFigure))
-        .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
-        .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
-        .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
-    }
-
-    function drawRects(otherRectangles) {
-      return svg
-        .selectAll(".rects")
-        .data(otherRectangles)
-        .enter()
-        .append("rect")
-        .attr("stroke-dasharray", (d) => strokeDash(d.nameOfFigure))
-        .attr("fill", (d) => color(d.nameOfFigure))
-        .attr("stroke", (d) => strokeColor(d.nameOfFigure))
-        .attr("opacity", (d) => (d.start >= 0 ? 1 : 0))
-        .attr("stroke-width", (d) => strokeWidth(d.nameOfFigure))
-        .attr("y", (d) => y(d._rowNumber) + yModified(d.nameOfFigure))
-        .attr("x", (d) => x(d.start))
-        .attr("height", y.bandwidth())
-        .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
-    }
-
-    function drawEvents(parsedDatasetLong) {
-      return svg
-        .selectAll(".event")
-        .data(parsedDatasetLong.events)
-        .enter()
-        .append("text")
-        .attr("x", (d) => x(d.event) + xModified(d.nameOfFigure))
-        .attr(
-          "y",
-          (d) => y(d._rowNumber) + y.bandwidth() / 2 + yModified(d.nameOfFigure)
-        )
-        .attr("opacity", (d) => (d.event >= 0 ? 1 : 0))
-        .attr("fill", (d) => color(d.nameOfFigure))
-        .style("font-size", (d) => symbolSize(d.nameOfFigure))
-        .style("font-family", "SymbolsNerdFontMono-Regular, monospace")
-        .style("text-anchor", "middle")
-        .text((d) => symbols(d.nameOfFigure));
-    }
 
     function drawTable(tableData, patients, fields) {
       const columnWidths = fields.map((field) => {
@@ -246,22 +264,6 @@ export async function createChart(container) {
         .text((d) => d.label);
     }
 
-    function drawChart(parsedDatasetLong) {
-      const rectanglesArray = parsedDatasetLong.rectangles.objects();
-
-      const lineRectangles = rectanglesArray.filter(
-        (d) => typeFigure(d.nameOfFigure) === "line"
-      );
-
-      const otherRectangles = rectanglesArray.filter(
-        (d) => typeFigure(d.nameOfFigure) !== "line"
-      );
-      drawLines(lineRectangles);
-      drawRects(otherRectangles);
-      drawEvents(parsedDatasetLong);
-      drawLegend();
-      drawTable(tableData, patients, fields);
-    }
     container.innerHTML = "";
 
     const svg = d3
@@ -301,7 +303,22 @@ export async function createChart(container) {
       .append("g")
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y).tickFormat(""));
-    drawChart(parsedDatasetLong);
+    const context = {
+      svg,
+      x,
+      y,
+      strokeColor,
+      strokeWidth,
+      strokeDash,
+      yModified,
+      color,
+      xModified,
+      symbols,
+      symbolSize,
+    };
+    drawChart(parsedDatasetLong, context, typeFigure);
+    drawLegend();
+    drawTable(tableData, patients, fields);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
