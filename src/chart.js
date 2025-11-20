@@ -204,13 +204,13 @@ function drawLegend(svg, scales, measures_context, colors) {
 }
 
 function processData(raw) {
-  const measures = {};
-
-  raw.measureData.forEach((d) => {
-    measures[d.measure] = +d.value;
-  });
-
-  const colors = raw.stylesData.map((d) => ({
+  const { stylesData, datasetLongLoad, measureData } = raw;
+  const measures = measureData.reduce((acc, d) => {
+    acc[d.measure] = +d.value;
+    return acc;
+  }, {});
+  //meassures на settings
+  const colors = stylesData.map((d) => ({
     key: d.key,
     type: d.type,
     color: d.color,
@@ -233,8 +233,8 @@ function processData(raw) {
     marginLeft: measures.marginLeft || 0,
   };
 
-  const minD = raw.stylesData[0].key;
-  const datasetLong = parseDate(raw.datasetLongLoad, minD);
+  const minD = stylesData[0].key;
+  const datasetLong = parseDate(datasetLongLoad, minD);
   const parsedDatasetLong = convertWideToLong(datasetLong);
   const sortedData = sort(parsedDatasetLong);
   const tableData = makeTable(datasetLong, minD);
@@ -346,15 +346,15 @@ const loadData = async (file) => {
 
   return { stylesData, measureData, datasetLongLoad };
 };
-
-const Plot = async (file, container) => {
+//svg до dropcharta
+const createChart = async (file, container) => {
   const data = await fetch(file);
   const raw = await loadData(data);
   const processedData = processData(raw);
   drawChart(processedData, container);
 };
 
-export async function createChart(container) {
+export async function main(container) {
   const style = document.createElement("style");
   style.textContent = `
     @font-face {
@@ -368,7 +368,7 @@ export async function createChart(container) {
   document.head.appendChild(style);
 
   try {
-    Plot("/src/data/infoo.xlsx", container);
+    createChart("/src/data/infoo.xlsx", container);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;

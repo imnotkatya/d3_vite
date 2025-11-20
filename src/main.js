@@ -1,4 +1,4 @@
-import { createChart } from "./chart.js";
+import { main } from "./chart.js";
 
 document.querySelector("#app").innerHTML = `
   <div>
@@ -9,4 +9,4 @@ document.querySelector("#app").innerHTML = `
 `;
 
 const container = document.querySelector("#chart-container");
-createChart(container);
+main(container);
