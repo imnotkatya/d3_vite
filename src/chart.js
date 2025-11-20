@@ -266,7 +266,7 @@ function processData(raw) {
   };
 }
 
-function drawChart(raw, container) {
+function drawChart(processedData, container) {
   const {
     colors,
     measures_context,
@@ -276,7 +276,7 @@ function drawChart(raw, container) {
     fields,
     uniqueNames,
     scales,
-  } = processData(raw);
+  } = processedData;
 
   container.innerHTML = "";
 
@@ -363,7 +363,9 @@ export async function createChart(container) {
   try {
     const file = await fetch("/src/data/infoo.xlsx");
     const raw = await loadData(file);
-    drawChart(raw, container);
+    const processedData = processData(raw);
+
+    drawChart(processedData, container);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
