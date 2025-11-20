@@ -91,8 +91,16 @@ function drawEvents(svg, events, context, scales) {
     .text((d) => symbols(d.nameOfFigure));
 }
 
-function drawTable(svg, tableData, patients, fields, context) {
-  const { y, marginLeft } = context;
+function drawTable(
+  svg,
+  tableData,
+  patients,
+  fields,
+  context,
+  measures_context
+) {
+  const { y } = context;
+  const { marginLeft } = measures_context;
 
   const columnWidths = fields.map((field) => {
     const maxLength = tableData
@@ -125,8 +133,8 @@ function drawTable(svg, tableData, patients, fields, context) {
   });
 }
 
-function drawLegend(svg, context, scales) {
-  const { marginTop, marginRight, width, colors } = context;
+function drawLegend(svg, context, scales, measures_context) {
+  const { colors } = context;
   const {
     symbols,
     symbolSize,
@@ -136,6 +144,7 @@ function drawLegend(svg, context, scales) {
     strokeDash,
     typeFigure,
   } = scales;
+  const { marginTop, marginRight, width } = measures_context;
 
   const legendStartY = marginTop + 50;
   const legendItemHeight = 25;
@@ -221,12 +230,14 @@ function drawChart(raw, container) {
     strokeWidth: +d["stroke-width"],
   }));
 
-  const width = raw.measures.width || 1600;
-  const height = raw.measures.height || 900;
-  const marginTop = raw.measures.marginTop || 0;
-  const marginRight = raw.measures.marginRight || 0;
-  const marginBottom = raw.measures.marginBottom || 0;
-  const marginLeft = raw.measures.marginLeft || 0;
+  const measures_context = {
+    width: raw.measures.width || 1600,
+    height: raw.measures.height || 900,
+    marginTop: raw.measures.marginTop || 0,
+    marginRight: raw.measures.marginRight || 0,
+    marginBottom: raw.measures.marginBottom || 0,
+    marginLeft: raw.measures.marginLeft || 0,
+  };
 
   const minD = raw.stylesData[0].key;
 
@@ -243,40 +254,43 @@ function drawChart(raw, container) {
   const svg = d3
     .select(container)
     .append("svg")
-    .attr("width", width)
-    .attr("height", height);
+    .attr("width", measures_context.width)
+    .attr("height", measures_context.height);
 
   const y = d3
     .scaleBand()
     .domain(uniqueNames)
     .paddingInner(0.5)
-    .range([height - marginBottom, marginTop]);
+    .range([
+      measures_context.height - measures_context.marginBottom,
+      measures_context.marginTop,
+    ]);
 
   const x = d3
     .scaleLinear()
     .domain(getDomainX(parsedDatasetLong))
     .nice()
-    .range([marginLeft, width - marginRight]);
+    .range([
+      measures_context.marginLeft,
+      measures_context.width - measures_context.marginRight,
+    ]);
 
   svg
     .append("g")
-    .attr("transform", `translate(0,${height - marginBottom})`)
+    .attr(
+      "transform",
+      `translate(0,${measures_context.height - measures_context.marginBottom})`
+    )
     .call(d3.axisBottom(x));
 
   svg
     .append("g")
-    .attr("transform", `translate(${marginLeft},0)`)
+    .attr("transform", `translate(${measures_context.marginLeft},0)`)
     .call(d3.axisLeft(y).tickFormat(""));
 
   const context = {
     x,
     y,
-    marginLeft,
-    marginTop,
-    marginRight,
-    marginBottom,
-    width,
-    height,
     colors,
   };
 
@@ -306,14 +320,13 @@ function drawChart(raw, container) {
   drawLines(svg, lineRectangles, context, scales);
   drawRects(svg, otherRectangles, context, scales);
   drawEvents(svg, events, context, scales);
-  drawTable(svg, tableData, patients, fields, context, scales);
-  drawLegend(svg, context, scales);
+  drawTable(svg, tableData, patients, fields, context, measures_context);
+  drawLegend(svg, context, scales, measures_context);
 }
 
 const loadData = async (file) => {
   const arrayBuffer = await file.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
-
   const stylesTable = loadExcel(workbook, "styles_labels_line");
   const measureTable = loadExcel(workbook, "measure");
   const datasetLongLoad = loadExcel(workbook, "death_fu");
