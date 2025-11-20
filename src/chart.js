@@ -64,6 +64,7 @@ export async function createChart(container) {
       symbolSize: +d.symbol_size,
       strokeWidth: +d["stroke-width"],
     }));
+
     const measureData = measureTable.objects();
     const measures = {};
     measureData.forEach((d) => {
@@ -244,6 +245,23 @@ export async function createChart(container) {
         .style("font-size", "12px")
         .text((d) => d.label);
     }
+
+    function drawChart(parsedDatasetLong) {
+      const rectanglesArray = parsedDatasetLong.rectangles.objects();
+
+      const lineRectangles = rectanglesArray.filter(
+        (d) => typeFigure(d.nameOfFigure) === "line"
+      );
+
+      const otherRectangles = rectanglesArray.filter(
+        (d) => typeFigure(d.nameOfFigure) !== "line"
+      );
+      drawLines(lineRectangles);
+      drawRects(otherRectangles);
+      drawEvents(parsedDatasetLong);
+      drawLegend();
+      drawTable(tableData, patients, fields);
+    }
     container.innerHTML = "";
 
     const svg = d3
@@ -283,21 +301,7 @@ export async function createChart(container) {
       .append("g")
       .attr("transform", `translate(${marginLeft},0)`)
       .call(d3.axisLeft(y).tickFormat(""));
-
-    const rectanglesArray = parsedDatasetLong.rectangles.objects();
-
-    const lineRectangles = rectanglesArray.filter(
-      (d) => typeFigure(d.nameOfFigure) === "line"
-    );
-
-    const otherRectangles = rectanglesArray.filter(
-      (d) => typeFigure(d.nameOfFigure) !== "line"
-    );
-    drawLines(lineRectangles);
-    drawRects(otherRectangles);
-    drawEvents(parsedDatasetLong);
-    drawLegend();
-    drawTable(tableData, patients, fields);
+    drawChart(parsedDatasetLong);
   } catch (error) {
     console.error("Error creating chart:", error);
     container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
