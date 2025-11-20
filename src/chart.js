@@ -29,9 +29,8 @@ function getDomainX(parsedDatasetLong) {
   return d3.extent(times);
 }
 
-function drawLines(svg, lineRectangles, context, scales) {
-  const { x, y } = context;
-  const { strokeColor, strokeWidth, strokeDash } = scales;
+function drawLines(svg, lineRectangles, scales) {
+  const { strokeColor, strokeWidth, strokeDash, x, y } = scales;
 
   return svg
     .selectAll(".line")
@@ -49,9 +48,9 @@ function drawLines(svg, lineRectangles, context, scales) {
     .attr("opacity", (d) => (d.start >= 0 ? 1 : 0));
 }
 
-function drawRects(svg, otherRectangles, context, scales) {
-  const { x, y } = context;
-  const { strokeDash, color, strokeColor, strokeWidth, yModified } = scales;
+function drawRects(svg, otherRectangles, scales) {
+  const { strokeDash, x, y, color, strokeColor, strokeWidth, yModified } =
+    scales;
 
   return svg
     .selectAll(".rects")
@@ -69,9 +68,8 @@ function drawRects(svg, otherRectangles, context, scales) {
     .attr("width", (d) => Math.max(0, x(d.end) - x(d.start)));
 }
 
-function drawEvents(svg, events, context, scales) {
-  const { x, y } = context;
-  const { color, yModified, xModified, symbols, symbolSize } = scales;
+function drawEvents(svg, events, scales) {
+  const { color, yModified, xModified, symbols, symbolSize, x, y } = scales;
 
   return svg
     .selectAll(".event")
@@ -91,15 +89,8 @@ function drawEvents(svg, events, context, scales) {
     .text((d) => symbols(d.nameOfFigure));
 }
 
-function drawTable(
-  svg,
-  tableData,
-  patients,
-  fields,
-  context,
-  measures_context
-) {
-  const { y } = context;
+function drawTable(svg, tableData, patients, fields, scales, measures_context) {
+  const { y } = scales;
   const { marginLeft } = measures_context;
 
   const columnWidths = fields.map((field) => {
@@ -133,8 +124,7 @@ function drawTable(
   });
 }
 
-function drawLegend(svg, context, scales, measures_context) {
-  const { colors } = context;
+function drawLegend(svg, scales, measures_context) {
   const {
     symbols,
     symbolSize,
@@ -143,6 +133,7 @@ function drawLegend(svg, context, scales, measures_context) {
     strokeWidth,
     strokeDash,
     typeFigure,
+    colors,
   } = scales;
   const { marginTop, marginRight, width } = measures_context;
 
@@ -288,12 +279,6 @@ function drawChart(raw, container) {
     .attr("transform", `translate(${measures_context.marginLeft},0)`)
     .call(d3.axisLeft(y).tickFormat(""));
 
-  const context = {
-    x,
-    y,
-    colors,
-  };
-
   const scales = {
     color: createScale(colors, "color"),
     strokeColor: createScale(colors, "stroke"),
@@ -304,6 +289,9 @@ function drawChart(raw, container) {
     symbolSize: createScale(colors, "symbolSize"),
     symbols: createScale(colors, "symbol"),
     typeFigure: createScale(colors, "type"),
+    x: x,
+    y: y,
+    colors: colors,
   };
 
   const rectanglesArray = parsedDatasetLong.rectangles.objects();
@@ -317,16 +305,17 @@ function drawChart(raw, container) {
     (d) => scales.typeFigure(d.nameOfFigure) !== "line"
   );
 
-  drawLines(svg, lineRectangles, context, scales);
-  drawRects(svg, otherRectangles, context, scales);
-  drawEvents(svg, events, context, scales);
-  drawTable(svg, tableData, patients, fields, context, measures_context);
-  drawLegend(svg, context, scales, measures_context);
+  drawLines(svg, lineRectangles, scales);
+  drawRects(svg, otherRectangles, scales);
+  drawEvents(svg, events, scales);
+  drawTable(svg, tableData, patients, fields, scales, measures_context);
+  drawLegend(svg, scales, measures_context);
 }
 
 const loadData = async (file) => {
   const arrayBuffer = await file.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
   const stylesTable = loadExcel(workbook, "styles_labels_line");
   const measureTable = loadExcel(workbook, "measure");
   const datasetLongLoad = loadExcel(workbook, "death_fu");
