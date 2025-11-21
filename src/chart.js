@@ -160,8 +160,11 @@ function drawLegend(svg, scales, settingsContext, colors) {
       "transform",
       `translate(${width - marginRight + 50}, ${legendStartY})`
     );
-
-  const uniqueLabels = aq.from(colors).dedupe("label").objects();
+  const uniqueLabels = aq
+    .from(colors)
+    .dedupe("label")
+    .filter((d) => d.label !== "")
+    .objects();
   uniqueLabels.forEach((colorObj, i) => {
     const key = colorObj.key;
     const symbol = symbols(key);
