@@ -18,9 +18,9 @@ function handleExcelUpload(file) {
         );
 
       resolve({
-        stylesTable: toTable("styles_labels_line"),
-        measureTable: toTable("measure"),
-        datasetLongLoad: toTable("death_fu"),
+        stylesTable: toTable("styles"),
+        measureTable: toTable("settings"),
+        datasetLongLoad: toTable("data"),
       });
     };
 
