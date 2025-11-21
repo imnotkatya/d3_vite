@@ -357,6 +357,44 @@ async function drawPlot(file, chartContent) {
   const processedData = processData(raw);
   drawChart(processedData, chartContent);
 }
+function uploadFile(container) {
+  const dropZone = container.querySelector("#drop-zone");
+  const visible = container.querySelector("h2");
+  const fileInput = container.querySelector("#excelFile");
+  const chartContent = container.querySelector("#chartContent");
+
+  dropZone.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    await drawPlot(file, chartContent);
+    dropZone.classList.add("hidden");
+    visible.classList.remove("hidden");
+  });
+
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+
+    await drawPlot(file, chartContent);
+    dropZone.classList.add("hidden");
+    visible.classList.remove("hidden");
+  });
+}
 export async function main(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -366,28 +404,50 @@ export async function main(container) {
       font-weight: normal;
       font-style: normal;
       font-display: block;
+      
     }
-  `;
+
+#drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 500px;
+  max-width: 100%;
+  height: 200px;
+  padding: 1em;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  color: slategray;
+  cursor: pointer;
+}
+.hidden {
+  display: none !important;
+}
+.visible {
+ display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+`;
   document.head.appendChild(style);
   container.innerHTML = `
-    <div class="excelUpload">
-      <input type="file" id="excelFile" accept=".xlsx, .xls" />
-      <div id="chartContent"></div>
-    </div>
-  `;
+<div class="excelUpload">
+  <h2 class="hidden">Построенный график</h2> 
+  <label id="drop-zone">
+    Перетащите Excel файл сюда или нажмите для добавления
+  </label>
+  <input type="file" id="excelFile" accept=".xlsx, .xls" style="display: none;" />
+  <div id="chartContent">
+    <p class="loading">Файл не выбран</p>
+  </div>
 
-  const fileInput = container.querySelector("#excelFile");
-  const chartContent = container.querySelector("#chartContent");
-
-  fileInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      drawPlot(file, chartContent);
-    } catch (error) {
-      console.error("Error creating chart:", error);
-      container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
-    }
-  });
+</div>
+`;
+  try {
+    uploadFile(container);
+  } catch (error) {
+    console.error("Error creating chart:", error);
+    container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
+  }
 }
