@@ -19,7 +19,7 @@ function handleExcelUpload(file) {
 
       resolve({
         stylesTable: toTable("styles"),
-        measureTable: toTable("settings"),
+        settingsTable: toTable("settings"),
         datasetLongLoad: toTable("data"),
       });
     };
@@ -348,7 +348,7 @@ async function drawPlot(file, chartContent) {
   const excelData = await handleExcelUpload(file);
   const raw = {
     stylesData: excelData.stylesTable.objects(),
-    settingsData: excelData.measureTable.objects(),
+    settingsData: excelData.settingsTable.objects(),
     datasetLongLoad: excelData.datasetLongLoad,
   };
   const processedData = processData(raw);
