@@ -350,7 +350,16 @@ function drawChart(processedData, container) {
   drawTable(svg, tableData, patients, fields, settingsContext, y);
   drawLegend(svg, scales, settingsContext, colors);
 }
-
+async function drawPlot(file, chartContent) {
+  const excelData = await handleExcelUpload(file);
+  const raw = {
+    stylesData: excelData.stylesTable.objects(),
+    settingsData: excelData.measureTable.objects(),
+    datasetLongLoad: excelData.datasetLongLoad,
+  };
+  const processedData = processData(raw);
+  drawChart(processedData, chartContent);
+}
 export async function main(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -378,15 +387,7 @@ export async function main(container) {
     if (!file) return;
 
     try {
-      chartContent.innerHTML = "";
-      const excelData = await handleExcelUpload(file);
-      const raw = {
-        stylesData: excelData.stylesTable.objects(),
-        settingsData: excelData.measureTable.objects(),
-        datasetLongLoad: excelData.datasetLongLoad,
-      };
-      const processedData = processData(raw);
-      drawChart(processedData, chartContent);
+      drawPlot(file, chartContent);
     } catch (error) {
       console.error("Error creating chart:", error);
       container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
