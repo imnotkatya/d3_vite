@@ -6,11 +6,27 @@ import * as aq from "arquero";
 import makeTable from "./makeTable";
 import * as XLSX from "xlsx";
 
-function loadExcel(workbook, sheetName) {
-  const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-    defval: "",
+function handleExcelUpload(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const workbook = XLSX.read(e.target.result, { type: "array" });
+      const toTable = (sheet) =>
+        aq.from(
+          XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { defval: "" })
+        );
+
+      resolve({
+        stylesTable: toTable("styles_labels_line"),
+        measureTable: toTable("measure"),
+        datasetLongLoad: toTable("death_fu"),
+      });
+    };
+
+    reader.onerror = () => reject(new Error("error"));
+    reader.readAsArrayBuffer(file);
   });
-  return aq.from(sheetData);
 }
 
 function createScale(colors, property) {
@@ -335,25 +351,6 @@ function drawChart(processedData, container) {
   drawLegend(svg, scales, settingsContext, colors);
 }
 
-const loadData = async (file) => {
-  const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: "array" });
-  const stylesTable = loadExcel(workbook, "styles_labels_line");
-  const settings = loadExcel(workbook, "measure");
-  const datasetLongLoad = loadExcel(workbook, "death_fu");
-  const stylesData = stylesTable.objects();
-  const settingsData = settings.objects();
-
-  return { stylesData, settingsData, datasetLongLoad };
-};
-//svg до dropcharta
-const createChart = async (file, container) => {
-  const data = await fetch(file);
-  const raw = await loadData(data);
-  const processedData = processData(raw);
-  drawChart(processedData, container);
-};
-
 export async function main(container) {
   const style = document.createElement("style");
   style.textContent = `
@@ -366,11 +363,33 @@ export async function main(container) {
     }
   `;
   document.head.appendChild(style);
+  container.innerHTML = `
+    <div class="excelUpload">
+      <input type="file" id="excelFile" accept=".xlsx, .xls" />
+      <div id="chartContent"></div>
+    </div>
+  `;
 
-  try {
-    createChart("/src/data/infoo.xlsx", container);
-  } catch (error) {
-    console.error("Error creating chart:", error);
-    container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
-  }
+  const fileInput = container.querySelector("#excelFile");
+  const chartContent = container.querySelector("#chartContent");
+
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      chartContent.innerHTML = "";
+      const excelData = await handleExcelUpload(file);
+      const raw = {
+        stylesData: excelData.stylesTable.objects(),
+        settingsData: excelData.measureTable.objects(),
+        datasetLongLoad: excelData.datasetLongLoad,
+      };
+      const processedData = processData(raw);
+      drawChart(processedData, chartContent);
+    } catch (error) {
+      console.error("Error creating chart:", error);
+      container.innerHTML = `<p>Error loading chart: ${error.message}</p>`;
+    }
+  });
 }
