@@ -294,43 +294,37 @@ function drawChart(processedData, container) {
     scales,
   } = processedData;
 
+  const { width, height, marginBottom, marginTop, marginRight, marginLeft } =
+    settingsContext;
+
   container.innerHTML = "";
 
   const svg = d3
     .select(container)
     .append("svg")
-    .attr("width", settingsContext.width)
-    .attr("height", settingsContext.height);
+    .attr("width", width)
+    .attr("height", height);
 
   const y = d3
     .scaleBand()
     .domain(uniqueNames)
     .paddingInner(0.5)
-    .range([
-      settingsContext.height - settingsContext.marginBottom,
-      settingsContext.marginTop,
-    ]);
+    .range([height - marginBottom, marginTop]);
 
   const x = d3
     .scaleLinear()
     .domain(getDomainX(parsedDatasetLong))
     .nice()
-    .range([
-      settingsContext.marginLeft,
-      settingsContext.width - settingsContext.marginRight,
-    ]);
+    .range([marginLeft, width - marginRight]);
 
   svg
     .append("g")
-    .attr(
-      "transform",
-      `translate(0,${settingsContext.height - settingsContext.marginBottom})`
-    )
+    .attr("transform", `translate(0,${height - marginBottom})`)
     .call(d3.axisBottom(x));
 
   svg
     .append("g")
-    .attr("transform", `translate(${settingsContext.marginLeft},0)`)
+    .attr("transform", `translate(${marginLeft},0)`)
     .call(d3.axisLeft(y).tickFormat(""));
 
   const rectanglesArray = parsedDatasetLong.rectangles.objects();
