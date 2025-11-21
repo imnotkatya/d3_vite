@@ -228,7 +228,7 @@ function processData(raw) {
     acc[d.measure] = +d.value;
     return acc;
   }, {});
-  //meassures на settings
+
   const colors = stylesData.map((d) => ({
     key: d.key,
     type: d.type,
@@ -406,15 +406,21 @@ export async function main(container) {
       font-display: block;
       
     }
-
+.excelUpload
+{
+ display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction:column;
+}
 #drop-zone {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 500px;
-  max-width: 100%;
+
   height: 200px;
-  padding: 1em;
+
   border: 1px solid #cccccc;
   border-radius: 4px;
   color: slategray;
@@ -427,7 +433,12 @@ export async function main(container) {
  display: flex;
   align-items: center;
   justify-content: center;
+ 
 }
+  h2
+  {
+   margin:0;
+   }
 
 `;
   document.head.appendChild(style);
